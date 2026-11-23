@@ -1,0 +1,122 @@
+# Correctness cases: the number Cube returns must equal a reference.
+#
+# Two kinds of reference:
+#   expected:      a GOLDEN NUMBER from an independent source (finance close, source system
+#                  report). `source` and `owner` are required. This is the strongest check,
+#                  because the person who wrote the Cube measure did not produce the answer.
+#   bigquery_sql:  reference SQL run straight against BigQuery. Write it from the business
+#                  definition, ideally by someone other than the measure's author; otherwise it
+#                  only proves two implementations by one person agree.
+#
+# Prefer bounded date ranges over all-time totals: they are cheaper, stable once a period
+# closes, and catch time-zone and calendar bugs that all-time totals hide.
+#
+# Time zone: Cube buckets time in the query's `timezone` (UTC if omitted). The reference SQL must
+# bucket in the same zone, e.g. DATE(order_ts, 'Australia/Sydney').
+
+cases:
+  # ------------------------------------------------------------ golden number
+  - id: revenue_oct_2026_matches_finance_close
+    persona: ci_reader
+    owner: finance-data@yourco.example
+    source: Finance month-end close pack, October 2026 (net revenue ex GST)
+    cube_query:
+      measures: [revenue.net_revenue]
+      timeDimensions:
+        - dimension: revenue.order_date
+          dateRange: [2026-10-01, 2026-10-31]
+      timezone: Australia/Sydney
+    expected: 4210000.00
+    abs_tol: 1.00
+
+  # ------------------------------------------------------------ grouped + time-bucketed parity
+  - id: revenue_by_state_by_month_q3_2026
+    persona: ci_reader
+    owner: sales-analytics@yourco.example
+    cube_query:
+      measures: [revenue.net_revenue, revenue.order_count]
+      dimensions: [revenue.state]
+      timeDimensions:
+        - dimension: revenue.order_date
+          granularity: month
+          dateRange: [2026-07-01, 2026-09-30]
+      timezone: Australia/Sydney
+    bigquery_sql: |
+      SELECT
+        state,
+        DATE_TRUNC(DATE(order_ts, 'Australia/Sydney'), MONTH) AS order_month,
+        SUM(net_amount)                                        AS net_revenue,
+        COUNT(*)                                               AS order_count  -- grain: one row per order
+      FROM `your-project.gold.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-07-01' AND '2026-09-30'
+        AND is_test_order = FALSE
+      GROUP BY 1, 2
+    keys:
+      revenue.state: state
+      revenue.order_date.month: order_month
+    values:
+      revenue.net_revenue: net_revenue
+      revenue.order_count: order_count
+
+  # ------------------------------------------------------------ rolling window (value, not existence)
+  - id: revenue_trailing_12m_at_sep_2026
+    persona: ci_reader
+    owner: sales-analytics@yourco.example
+    cube_query:
+      measures: [revenue.net_revenue_trailing_12m]
+      timeDimensions:
+        - dimension: revenue.order_date
+          granularity: month
+          dateRange: [2026-09-01, 2026-09-30]
+      timezone: Australia/Sydney
+    bigquery_sql: |
+      SELECT DATE '2026-09-01' AS order_month, SUM(net_amount) AS t12m
+      FROM `your-project.gold.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2025-10-01' AND '2026-09-30'
+        AND is_test_order = FALSE
+    keys:
+      revenue.order_date.month: order_month
+    values:
+      revenue.net_revenue_trailing_12m: t12m
+
+  # ------------------------------------------------------------ prior period (time_shift)
+  - id: revenue_prior_year_for_sep_2026
+    persona: ci_reader
+    owner: sales-analytics@yourco.example
+    cube_query:
+      measures: [revenue.net_revenue_prior_year]
+      timeDimensions:
+        - dimension: revenue.order_date
+          granularity: month
+          dateRange: [2026-09-01, 2026-09-30]
+      timezone: Australia/Sydney
+    bigquery_sql: |
+      SELECT DATE '2026-09-01' AS order_month, SUM(net_amount) AS prior_year
+      FROM `your-project.gold.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2025-09-01' AND '2025-09-30'
+        AND is_test_order = FALSE
+    keys:
+      revenue.order_date.month: order_month
+    values:
+      revenue.net_revenue_prior_year: prior_year
+
+  # ------------------------------------------------------------ row-level security, numerically
+  # The restricted persona's total must equal the source total for ITS rows — not merely be
+  # smaller than the unrestricted total.
+  - id: nsw_analyst_sees_exactly_nsw_revenue
+    persona: analyst_nsw
+    owner: sales-analytics@yourco.example
+    cube_query:
+      measures: [revenue.net_revenue]
+      timeDimensions:
+        - dimension: revenue.order_date
+          dateRange: [2026-10-01, 2026-10-31]
+      timezone: Australia/Sydney
+    bigquery_sql: |
+      SELECT SUM(net_amount) AS net_revenue
+      FROM `your-project.gold.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-10-01' AND '2026-10-31'
+        AND state = 'NSW' AND is_test_order = FALSE
+    keys: {}
+    values:
+      revenue.net_revenue: net_revenue

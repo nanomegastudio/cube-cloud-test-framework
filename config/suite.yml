@@ -1,0 +1,79 @@
+# Main suite configuration. Edit this file, not the tests.
+# The examples assume a model with private `base_*` cubes and three public views.
+
+# Private cubes are named with this prefix (used only if /meta has no `type` field).
+private_prefix: base_
+
+# Persona whose /meta is treated as "the whole storefront" (must see every view).
+# Use a non-admin, all-access persona: tests never rely on an admin fallback.
+storefront_persona: ci_reader
+
+# Persona used for queries where access is not under test (fan-out, smoke).
+default_persona: ci_reader
+
+# ---------------------------------------------------------------- storefront
+# The exact set of PUBLIC views. Publishing a view is a reviewed act: a new view fails the
+# storefront test until it is added here (with its personas, descriptions and policy).
+expected_views:
+  - orders
+  - customers
+  - revenue
+
+# Views with no event date (catalog-style); exempt from "must have a time dimension".
+catalog_views:
+  - customers
+
+# ---------------------------------------------------------------- governance
+governance:
+  # meta keys every PUBLIC VIEW must carry (set in the view's `meta:` block).
+  required_view_meta: [owner, steward, data_product]
+  # Members exempt from needing a description (full names).
+  undocumented_allowlist: []
+  # PII: members whose name matches a pattern OR whose meta has `pii: true` may only appear in
+  # these views. Name patterns are a backstop; the meta tag (ideally carried over from dbt column
+  # meta) is the primary control.
+  pii_name_patterns: ['(^|_)email$', '(^|_)phone', '(^|_)address', 'date_of_birth', '(^|_)tfn$',
+                      'first_name', 'last_name', 'full_name']
+  pii_allowed_views: [customers]
+  # If true, every public member must declare meta.classification (e.g. public/internal/pii).
+  require_classification: false
+
+# ---------------------------------------------------------------- row-level security
+# Any public view exposing a dimension with this short name must be row-filtered for the
+# personas listed in personas.yml under `row_values`. Views are discovered from /meta, so a new
+# view that exposes `state` is checked automatically; exemptions must be explicit.
+# The contract tier reads the predicate on `sql_column` (default: the dimension's short name) in
+# the SQL Cube generates and requires it to bind exactly the persona's row_values. Set
+# sql_column when the dimension's SQL column has a different name (e.g. `state_code`).
+row_filters:
+  - dimension: state
+    # sql_column: state
+    exempt_views: []
+
+# ---------------------------------------------------------------- smoke
+# Date range applied to smoke queries (on each view's first time dimension) to cap BigQuery
+# cost. Use a short, closed period. Remove to query all history.
+smoke_date_range: [2026-10-01, 2026-10-07]
+
+# ---------------------------------------------------------------- row limit
+# Rows requested from Cube for parity, rollup-value, fan-out and row-value queries. Set it to
+# your deployment's CUBEJS_DB_QUERY_LIMIT (50,000 by default). A result that reaches it fails as
+# "probably cut off" instead of being compared as if complete.
+row_limit: 50000
+
+# ---------------------------------------------------------------- fan-out
+fanout:
+  # Max (measure, joined dimension) pairs checked per view; each pair costs two queries.
+  max_pairs_per_view: 6
+  # Pairs where a total legitimately grows when grouped (the dimension is on the MANY side of a
+  # join, so one fact row belongs to several groups). Each needs a reason.
+  allowlist:
+    # - view: orders
+    #   measure: orders.total_revenue
+    #   dimension: orders.product_category
+    #   reason: an order spans several categories; per-category totals overlap by design
+
+# ---------------------------------------------------------------- tolerances
+tolerance:
+  abs: 0.01       # currency: one cent
+  rel: 0.000001   # relative, for very large totals summed in a different order

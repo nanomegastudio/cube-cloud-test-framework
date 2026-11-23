@@ -1,0 +1,39 @@
+# Test personas. `claims` is the JWT payload = Cube security context. Shape it to match what
+# your cube.py (check_auth / context_to_groups) and your access_policy rules read.
+#
+# The examples assume:
+#   - context_to_groups returns securityContext["groups"]
+#   - views use access_policy rows filtered by  values: ["{ securityContext.state }"]
+#
+# Rules the suite enforces:
+#   can_see     -> these views MUST be visible in this persona's /meta
+#   cannot_see  -> these views MUST NOT be visible
+#   row_values  -> for each row filter dimension, the ONLY values this persona may get back.
+#                  Omit a dimension to mean "unrestricted".
+
+personas:
+  ci_reader:
+    description: Non-admin, all-access identity used by CI. Never use an admin fallback.
+    claims: {sub: ci-reader, groups: [exec]}
+    can_see: [orders, customers, revenue]
+
+  analyst_nsw:
+    description: Sales analyst restricted to NSW rows, no PII.
+    claims: {sub: test-analyst-nsw, groups: [analyst], state: NSW}
+    can_see: [orders, revenue]
+    cannot_see: [customers]
+    row_values:
+      state: [NSW]
+
+  analyst_vic:
+    description: Sales analyst restricted to VIC rows, no PII.
+    claims: {sub: test-analyst-vic, groups: [analyst], state: VIC}
+    can_see: [orders, revenue]
+    cannot_see: [customers]
+    row_values:
+      state: [VIC]
+
+  no_groups:
+    description: Authenticated but holds no group. Must see nothing.
+    claims: {sub: test-nobody}
+    cannot_see: [orders, customers, revenue]

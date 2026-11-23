@@ -1,0 +1,106 @@
+# Example GitHub Actions workflow for the Cube model repository.
+# Assumes this suite lives at semantic_tests/ and the Cube model at model/.
+# Copy to .github/workflows/cube-semantic-tests.yml and set the secrets/variables listed below.
+#
+# Secrets:   CUBE_API_SECRET, CUBE_CLOUD_API_KEY
+# Variables: CUBE_CLOUD_HOST, CUBE_DEPLOYMENT_ID, CUBE_PROD_API_URL,
+#            CUBE_STAGING_API_URL_TEMPLATE (e.g. https://{branch}--your-deployment.../cubejs-api;
+#              copy a real branch URL from Cube Cloud's API credentials and replace the branch
+#              part with {branch}),
+#            BQ_PROJECT, BQ_LOCATION, GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT
+
+name: cube-semantic-tests
+
+on:
+  pull_request:
+    paths: ["model/**", "cube.py", "semantic_tests/**"]
+  # Fired by Airflow after the production dbt run (repository_dispatch), or by hand.
+  repository_dispatch:
+    types: [dbt-prod-run-finished]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write   # for Workload Identity Federation to GCP
+
+defaults:
+  run:
+    working-directory: semantic_tests
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install PyYAML Jinja2
+      - run: python scripts/lint_model.py ../model
+
+  # PR gate: compile the branch, then contract tier against its staging environment.
+  # No BigQuery execution, so it is cheap enough for every push.
+  contract:
+    if: github.event_name == 'pull_request'
+    needs: lint
+    runs-on: ubuntu-latest
+    env:
+      CUBE_CLOUD_HOST: ${{ vars.CUBE_CLOUD_HOST }}
+      CUBE_CLOUD_API_KEY: ${{ secrets.CUBE_CLOUD_API_KEY }}
+      CUBE_DEPLOYMENT_ID: ${{ vars.CUBE_DEPLOYMENT_ID }}
+      CUBE_BRANCH: ${{ github.head_ref }}
+      CUBE_API_SECRET: ${{ secrets.CUBE_API_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+
+      - name: Keep the branch staging environment active
+        run: |
+          curl -fsS -X PUT \
+            -H "Authorization: Bearer $CUBE_CLOUD_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"branchName\": \"$CUBE_BRANCH\", \"enabled\": true}" \
+            "$CUBE_CLOUD_HOST/build/api/v1/deployments/$CUBE_DEPLOYMENT_ID/branches/staging-environment"
+
+      - name: Point the suite at the branch
+        env:
+          TEMPLATE: ${{ vars.CUBE_STAGING_API_URL_TEMPLATE }}
+        run: echo "CUBE_API_URL=${TEMPLATE//\{branch\}/$CUBE_BRANCH}" >> "$GITHUB_ENV"
+
+      - name: Framework self-tests (no network)
+        run: pytest -m unit
+
+      - name: Contract tier (compile, storefront, governance, auth, row filter in SQL)
+        run: pytest -m contract
+
+  # After the production dbt run: rollups rebuilt -> data, parity and rollup tiers on prod.
+  # A failure here should block "dashboards are fresh" and alert the data product owner.
+  post-load:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      CUBE_API_URL: ${{ vars.CUBE_PROD_API_URL }}
+      CUBE_API_SECRET: ${{ secrets.CUBE_API_SECRET }}
+      BQ_PROJECT: ${{ vars.BQ_PROJECT }}
+      BQ_LOCATION: ${{ vars.BQ_LOCATION }}
+      CI_RUN_ID: gha-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}   # needs BigQuery Job User + Data Viewer on gold
+      - name: Wait for rollups to rebuild
+        run: python scripts/wait_for_rollups.py --timeout 1800
+      - name: Contract, data, parity and rollup tiers
+        run: pytest -m "contract or data or parity or rollup" --junitxml=results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: semantic-test-results, path: semantic_tests/results.xml}

@@ -1,0 +1,48 @@
+# Pre-aggregation cases. Each is checked four ways:
+#   routing          /v1/sql shows the query is matched to the named rollup (no cost)
+#   materialisation  /v1/load actually served it from the rollup (usedPreAggregations)
+#   values           the rollup's rows equal BigQuery's rows for the same question
+#   freshness        the latest period in the rollup is no older than the latest in BigQuery.
+#                    Asked at the rollup's granularity (the case query's, or
+#                    freshness.granularity) and must be SERVED by the rollup, or it fails.
+#                    A monthly rollup can only be checked month by month; add
+#                    max_refresh_age_hours to also catch one that is stale within the month.
+#
+# Run after the production dbt run AND the rollup refresh, so "fresh" has a meaning.
+
+cases:
+  - id: revenue_monthly_by_state
+    persona: ci_reader
+    pre_aggregation: revenue_by_state_monthly     # substring of the rollup's name
+    cube_query:
+      measures: [revenue.net_revenue, revenue.order_count]
+      dimensions: [revenue.state]
+      timeDimensions:
+        - dimension: revenue.order_date
+          granularity: month
+          dateRange: [2026-07-01, 2026-09-30]
+      timezone: Australia/Sydney
+    bigquery_sql: |
+      SELECT
+        state,
+        DATE_TRUNC(DATE(order_ts, 'Australia/Sydney'), MONTH) AS order_month,
+        SUM(net_amount)                                        AS net_revenue,
+        COUNT(*)                                               AS order_count
+      FROM `your-project.gold.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-07-01' AND '2026-09-30'
+        AND is_test_order = FALSE
+      GROUP BY 1, 2
+    keys:
+      revenue.state: state
+      revenue.order_date.month: order_month
+    values:
+      revenue.net_revenue: net_revenue
+      revenue.order_count: order_count
+    freshness:
+      time_dimension: revenue.order_date
+      bigquery_max_sql: |
+        SELECT MAX(DATE(order_ts, 'Australia/Sydney')) FROM `your-project.gold.fct_orders`
+        WHERE is_test_order = FALSE
+      max_lag_days: 1
+      # granularity: month          # default: this case's granularity on time_dimension
+      # max_refresh_age_hours: 26   # fail if Cube says the rollup was built longer ago
