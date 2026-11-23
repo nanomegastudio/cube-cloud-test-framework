@@ -2,8 +2,16 @@
 # Assumes this suite lives at semantic_tests/ and the Cube model at model/.
 # Copy to .github/workflows/cube-semantic-tests.yml and set the secrets/variables listed below.
 #
-# Secrets:   CUBE_API_SECRET, CUBE_CLOUD_API_KEY
-# Variables: CUBE_CLOUD_HOST, CUBE_DEPLOYMENT_ID, CUBE_PROD_API_URL,
+# Two Cube Cloud deployments: pre-prod (reads gold_staging) and prod (reads gold).
+# Nightly flow, orchestrated by Airflow (see ci/airflow_dag_example.py):
+#   dbt builds gold_staging -> dispatch `staging-built` -> preprod-gate (full suite on pre-prod)
+#   -> Airflow publishes gold_staging to gold only if the gate passed -> dispatch `gold-published`
+#   -> prod-check (rollups rebuilt and fresh in prod; Airflow rolls back on failure).
+# Prod never serves data the full suite has not passed on.
+#
+# Secrets:   CUBE_API_SECRET (prod), CUBE_PREPROD_API_SECRET, CUBE_CLOUD_API_KEY
+# Variables: CUBE_CLOUD_HOST, CUBE_DEPLOYMENT_ID, CUBE_PROD_API_URL, CUBE_PREPROD_API_URL,
+#            GOLD_STAGING_DATASET (e.g. gold_staging),
 #            CUBE_STAGING_API_URL_TEMPLATE (e.g. https://{branch}--your-deployment.../cubejs-api;
 #              copy a real branch URL from Cube Cloud's API credentials and replace the branch
 #              part with {branch}),
@@ -14,13 +22,20 @@ name: cube-semantic-tests
 on:
   pull_request:
     paths: ["model/**", "cube.py", "semantic_tests/**"]
-  # Fired by Airflow after the production dbt run (repository_dispatch), or by hand.
+  # Fired by Airflow: `staging-built` after dbt builds gold_staging, `gold-published` after the
+  # publish to gold. Or run by hand.
   repository_dispatch:
-    types: [dbt-prod-run-finished]
+    types: [staging-built, gold-published]
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Which stage to run
+        type: choice
+        options: [preprod-gate, prod-check]
+        default: preprod-gate
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.action || inputs.stage || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -77,17 +92,25 @@ jobs:
       - name: Contract tier (compile, storefront, governance, auth, row filter in SQL)
         run: pytest -m contract
 
-  # After the production dbt run: rollups rebuilt -> data, parity and rollup tiers on prod.
-  # A failure here should block "dashboards are fresh" and alert the data product owner.
-  post-load:
-    if: github.event_name != 'pull_request'
+  # Gate: the full suite on the PRE-PROD deployment, which reads gold_staging. Airflow publishes
+  # to gold only if this job succeeds. Reference SQL reads the same dataset via SEMTEST_VAR_*.
+  preprod-gate:
+    if: >-
+      github.event.action == 'staging-built' ||
+      (github.event_name == 'workflow_dispatch' && inputs.stage == 'preprod-gate')
     runs-on: ubuntu-latest
     env:
-      CUBE_API_URL: ${{ vars.CUBE_PROD_API_URL }}
-      CUBE_API_SECRET: ${{ secrets.CUBE_API_SECRET }}
+      CUBE_API_URL: ${{ vars.CUBE_PREPROD_API_URL }}
+      CUBE_API_SECRET: ${{ secrets.CUBE_PREPROD_API_SECRET }}
+      SEMTEST_VAR_GOLD_DATASET: ${{ vars.GOLD_STAGING_DATASET }}
+      SEMTEST_VAR_PROJECT: ${{ vars.BQ_PROJECT }}
       BQ_PROJECT: ${{ vars.BQ_PROJECT }}
       BQ_LOCATION: ${{ vars.BQ_LOCATION }}
       CI_RUN_ID: gha-${{ github.run_id }}
+      # Store every check's result (needs BigQuery Data Editor on the results dataset).
+      SEMTEST_RESULTS: bigquery
+      SEMTEST_RESULTS_TABLE: ${{ vars.SEMTEST_RESULTS_TABLE }}
+      SEMTEST_ENVIRONMENT: preprod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -96,11 +119,48 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}   # needs BigQuery Job User + Data Viewer on gold
-      - name: Wait for rollups to rebuild
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}   # BigQuery Job User + Data Viewer on gold_staging
+      - name: Wait for pre-prod rollups to rebuild from gold_staging
         run: python scripts/wait_for_rollups.py --timeout 1800
-      - name: Contract, data, parity and rollup tiers
+      - name: Contract, data, parity and rollup tiers on pre-prod
         run: pytest -m "contract or data or parity or rollup" --junitxml=results.xml
       - uses: actions/upload-artifact@v4
         if: always()
-        with: {name: semantic-test-results, path: semantic_tests/results.xml}
+        with: {name: preprod-gate-results, path: semantic_tests/results.xml}
+
+  # After the publish: prod's rollups rebuilt from the new gold, are served and are fresh.
+  # Values were already proven on pre-prod; this catches a failed or partial prod rebuild.
+  # A failure here is Airflow's signal to roll gold back (sql/publish_gold.sql).
+  prod-check:
+    if: >-
+      github.event.action == 'gold-published' ||
+      (github.event_name == 'workflow_dispatch' && inputs.stage == 'prod-check')
+    runs-on: ubuntu-latest
+    env:
+      CUBE_API_URL: ${{ vars.CUBE_PROD_API_URL }}
+      CUBE_API_SECRET: ${{ secrets.CUBE_API_SECRET }}
+      SEMTEST_VAR_PROJECT: ${{ vars.BQ_PROJECT }}
+      BQ_PROJECT: ${{ vars.BQ_PROJECT }}
+      BQ_LOCATION: ${{ vars.BQ_LOCATION }}
+      CI_RUN_ID: gha-${{ github.run_id }}
+      SEMTEST_RESULTS: bigquery
+      SEMTEST_RESULTS_TABLE: ${{ vars.SEMTEST_RESULTS_TABLE }}
+      SEMTEST_ENVIRONMENT: prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}   # BigQuery Job User + Data Viewer on gold
+      - name: Wait for prod rollups to rebuild after the publish
+        run: python scripts/wait_for_rollups.py --timeout 1800
+      - name: Rollups routed, served and fresh in prod
+        run: >-
+          pytest -m rollup -k "routed or materialised or fresh"
+          --junitxml=results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: prod-check-results, path: semantic_tests/results.xml}

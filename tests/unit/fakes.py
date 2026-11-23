@@ -29,6 +29,12 @@ class FakeSession:
         return _Resp(self.handler(json["query"]))
 
 
+def fake_dq():
+    """A real DQ recorder, detached from any pytest item, for calling test functions directly."""
+    from semtest.pytest_results import DQ, _ItemState
+    return DQ(_ItemState())
+
+
 def fake_cube(handler: Callable[[dict[str, Any]], dict[str, Any]],
               row_limit: int = 50000) -> CubeClient:
     client = CubeClient("https://cube.invalid/cubejs-api", "test-secret", row_limit=row_limit)

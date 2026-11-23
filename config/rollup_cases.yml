@@ -8,7 +8,8 @@
 #                    A monthly rollup can only be checked month by month; add
 #                    max_refresh_age_hours to also catch one that is stale within the month.
 #
-# Run after the production dbt run AND the rollup refresh, so "fresh" has a meaning.
+# Run after the dbt run AND the rollup refresh in the environment under test (pre-prod first),
+# so "fresh" has a meaning. Tables use ${project}.${gold_dataset}; see suite.yml › sql_vars.
 
 cases:
   - id: revenue_monthly_by_state
@@ -20,7 +21,7 @@ cases:
       timeDimensions:
         - dimension: revenue.order_date
           granularity: month
-          dateRange: [2026-07-01, 2026-09-30]
+          dateRange: last_complete_quarter
       timezone: Australia/Sydney
     bigquery_sql: |
       SELECT
@@ -28,8 +29,8 @@ cases:
         DATE_TRUNC(DATE(order_ts, 'Australia/Sydney'), MONTH) AS order_month,
         SUM(net_amount)                                        AS net_revenue,
         COUNT(*)                                               AS order_count
-      FROM `your-project.gold.fct_orders`
-      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-07-01' AND '2026-09-30'
+      FROM `${project}.${gold_dataset}.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '${date_from}' AND '${date_to}'
         AND is_test_order = FALSE
       GROUP BY 1, 2
     keys:
@@ -41,7 +42,7 @@ cases:
     freshness:
       time_dimension: revenue.order_date
       bigquery_max_sql: |
-        SELECT MAX(DATE(order_ts, 'Australia/Sydney')) FROM `your-project.gold.fct_orders`
+        SELECT MAX(DATE(order_ts, 'Australia/Sydney')) FROM `${project}.${gold_dataset}.fct_orders`
         WHERE is_test_order = FALSE
       max_lag_days: 1
       # granularity: month          # default: this case's granularity on time_dimension

@@ -50,10 +50,23 @@ row_filters:
     # sql_column: state
     exempt_views: []
 
+# ---------------------------------------------------------------- environment
+# Time zone that "today" is taken in for relative date ranges (a case's own cube_query.timezone
+# wins for that case). SEMTEST_AS_OF=YYYY-MM-DD pins "today" to re-run a past day.
+timezone: Australia/Sydney
+
+# Variables for reference SQL, written ${name}. Override any of them per environment with
+# SEMTEST_VAR_<NAME>, e.g. pre-prod sets SEMTEST_VAR_GOLD_DATASET=gold_staging so the reference
+# SQL reads the same dataset as the pre-prod Cube. An undefined ${name} is an error.
+sql_vars:
+  project: your-project
+  gold_dataset: gold
+
 # ---------------------------------------------------------------- smoke
-# Date range applied to smoke queries (on each view's first time dimension) to cap BigQuery
-# cost. Use a short, closed period. Remove to query all history.
-smoke_date_range: [2026-10-01, 2026-10-07]
+# Date range applied to smoke and fan-out queries (on each view's first time dimension) to cap
+# BigQuery cost. A relative name keeps it inside the data as time passes (and inside a staging
+# dataset that only holds recent days); [from, to] also works. Remove to query all history.
+smoke_date_range: last_7_complete_days
 
 # ---------------------------------------------------------------- row limit
 # Rows requested from Cube for parity, rollup-value, fan-out and row-value queries. Set it to
@@ -72,6 +85,23 @@ fanout:
     #   measure: orders.total_revenue
     #   dimension: orders.product_category
     #   reason: an order spans several categories; per-category totals overlap by design
+
+# ---------------------------------------------------------------- results table
+# Store one row per check per run (status, observed vs expected, severity, owner) so results can
+# be trended and alerted on. Off by default. SEMTEST_RESULTS=bigquery|jsonl|off overrides
+# `enabled`/`sink`, and SEMTEST_RESULTS_TABLE overrides the table, so CI or Airflow can switch it
+# on without editing this file. BigQuery uses Application Default Credentials; no keys go here.
+results:
+  enabled: false
+  sink: bigquery              # bigquery | jsonl
+  bigquery:
+    table: semantic_tests.check_results   # dataset.table (project from BQ_RESULTS_PROJECT or
+                                          # BQ_PROJECT) or project.dataset.table
+    # location: australia-southeast1      # default: BQ_LOCATION
+    auto_create: true         # create dataset + partitioned table on first write (needs
+                              # BigQuery Data Editor); false = create it from sql/check_results.sql
+  jsonl_path: results/check_results.jsonl  # used when sink is jsonl
+  fail_on_write_error: false  # true = a failed write fails the run (the test verdicts never change)
 
 # ---------------------------------------------------------------- tolerances
 tolerance:

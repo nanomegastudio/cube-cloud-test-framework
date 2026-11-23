@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from semtest import config
+from semtest import cases, config
 from semtest import meta as m
 from semtest.cube import CubeError
 
@@ -30,7 +30,7 @@ def test_every_measure_answers(cube, storefront_meta, suite_cfg, default_claims,
     names = [x["name"] for x in m.measures(v or {})]
     if not names:
         pytest.fail(f"{view}: no measures")
-    rng = suite_cfg.get("smoke_date_range")
+    rng = cases.smoke_window(suite_cfg)
     try:
         cube.load(_bounded({"measures": names, "limit": 1}, v, rng), default_claims)
         return
@@ -53,7 +53,7 @@ def test_every_time_dimension_slices_by_month(cube, storefront_meta, suite_cfg,
     if not tds:
         pytest.skip(f"{view}: no time dimension")
     measure = m.measures(v)[0]["name"]
-    rng = suite_cfg.get("smoke_date_range")
+    rng = cases.smoke_window(suite_cfg)
     for td in tds:
         spec = {"dimension": td["name"], "granularity": "month"}
         if rng:

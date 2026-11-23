@@ -16,7 +16,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from semtest import config  # noqa: E402
+from semtest import cases, config  # noqa: E402
 from semtest.cube import CubeClient, CubeError  # noqa: E402
 
 
@@ -29,7 +29,7 @@ def main() -> int:
     config.load_dotenv()
     cube = CubeClient(config.env("CUBE_API_URL"), config.env("CUBE_API_SECRET"), timeout=120)
     personas = config.personas()
-    pending = {c["id"]: c for c in config.rollup_cases()}
+    pending = {c["id"]: cases.prepare(c) for c in config.rollup_cases()}
     deadline = time.time() + args.timeout
 
     while pending and time.time() < deadline:

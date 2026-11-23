@@ -28,6 +28,7 @@ tests/contract/     compile, storefront, governance, auth, row filter in generat
 tests/data/         smoke, row values, fan-out, parity, rollups (executes through Cube)
 tests/unit/         the framework's own tests, against a fake Cube (no network, no credentials)
 scripts/            lint_model.py (static model lint), wait_for_rollups.py
+sql/                check_results.sql: DDL and example queries for the results table
 ci/                 example GitHub Actions workflow
 ```
 
@@ -103,16 +104,96 @@ python scripts/wait_for_rollups.py && pytest -m rollup
 4. **`config/rollup_cases.yml`**: one case per pre-aggregation that matters. Include a query
    that should hit the rollup, the matching BigQuery SQL, and a freshness rule.
 
-## CI
+## CI: pre-prod gate, then publish
 
-`ci/github-actions.yml` runs:
-- `lint` on PRs, then `contract` against the branch's staging environment (after making it
-  always-active through the Control Plane API).
-- `post-load` on a `repository_dispatch` sent by Airflow after the production dbt run: wait for
-  rollups, then `contract or data or parity or rollup` against production.
+The suite assumes two Cube Cloud deployments of the same model: **pre-prod**, reading
+`gold_staging`, and **prod**, reading `gold`. Prod never serves data that has not passed the full
+suite on pre-prod:
 
-BigQuery access uses Workload Identity Federation. Give the service account BigQuery Job User
-and read-only access to the gold datasets.
+1. dbt builds `gold_staging` (not `gold`), and Airflow logs it in `ops.staging_build_log`.
+2. **Pre-prod gate:** pre-prod's rollups rebuild (their `refresh_key` reads that log), then the
+   full suite runs against pre-prod, with `SEMTEST_VAR_GOLD_DATASET=gold_staging` so the
+   reference SQL reads the same data.
+3. **Publish**, only if the gate passed: each gold table is cloned to `gold_prev`, `gold_staging`
+   is cloned over `gold`, and a row goes into `ops.publish_log`.
+4. **Prod check:** prod's rollups rebuild (their `refresh_key` reads `publish_log`), then the
+   rollup routing, materialisation and freshness checks run on prod. On failure, gold is cloned
+   back from `gold_prev`.
+
+Model changes are gated separately: a PR runs `lint` and the `contract` tier against the
+branch's staging environment before merge.
+
+Files:
+- `ci/airflow_dag_example.py`: the nightly flow as an Airflow DAG (a sketch to adapt).
+- `ci/github-actions.yml`: the PR gate, plus `preprod-gate` and `prod-check` jobs that Airflow can
+  trigger with `repository_dispatch` (`staging-built`, `gold-published`) if you'd rather run
+  the suite in GitHub Actions.
+- `sql/publish_gold.sql`: the publish log tables, publish and rollback SQL, and the Cube model
+  settings (`GOLD_DATASET`, `REFRESH_LOG` and the `refresh_key`) for both deployments.
+
+**Config that differs per environment** is set with environment variables, never by editing
+cases: `CUBE_API_URL`, `CUBE_API_SECRET`, and `SEMTEST_VAR_<NAME>` for any `${name}` in the
+reference SQL (`suite.yml › sql_vars`).
+
+**Dates** in cases and `smoke_date_range` can be relative (`last_complete_month`,
+`last_7_complete_days`, ...), so they stay inside the data, including a staging dataset that
+only holds recent days. The resolved range is `${date_from}` / `${date_to}` in that case's SQL.
+Keep golden numbers on fixed, closed periods. `SEMTEST_AS_OF=YYYY-MM-DD` re-runs a past day.
+
+BigQuery access uses Workload Identity Federation. The service account needs BigQuery Job User
+and read access to `gold` and `gold_staging`; the publish step also needs Data Editor on `gold`,
+`gold_prev` and `ops`.
+
+## Storing results
+
+By default results only appear as pass/fail in the pytest output. Turn on the results table to
+keep one row per check per run, so you can trend numbers, see what is failing right now and
+who owns it, and alert from BigQuery (or Looker, or an Airflow sensor) instead of a CI log.
+
+**Turn it on** in `config/suite.yml › results` (`enabled: true`), or per run with environment
+variables, which win over the file:
+
+```bash
+SEMTEST_RESULTS=bigquery SEMTEST_RESULTS_TABLE=your-project.semantic_tests.check_results \
+SEMTEST_ENVIRONMENT=prod pytest -m "data or parity or rollup"
+SEMTEST_RESULTS=jsonl pytest -m contract        # local file: results/check_results.jsonl
+```
+
+The BigQuery sink appends with a load job (no streaming cost) using Application Default
+Credentials, like the reference queries; no keys are configured in the repo. With
+`auto_create: true` it creates the dataset and a table partitioned by day and clustered by
+check and status, which needs BigQuery Data Editor on that dataset. Otherwise create it from
+`sql/check_results.sql` (or `python -m semtest.results --ddl project.dataset.table`). If the
+write fails, the run still reports its test results and prints the error. Set
+`fail_on_write_error: true` to fail the run as well.
+
+**Columns:** `run_id` (CI_RUN_ID or a generated id), `run_started_at`, `recorded_at`,
+`check_id` (pytest node id), `check_name`, `case_id`, `tier`, `status`
+(`pass | fail | warn | error | skip`), `severity` (`error | warn`), `observed`, `expected`
+(JSON), `observed_value` / `expected_value` (when the value is a single number), `message`,
+`owner`, `environment`, `duration_s`, `git_sha`.
+
+**Owner** comes from a case's `owner:` (parity and rollup cases), else the view's `meta.owner`
+for checks run per view, else whatever the test sets with `dq.owner = ...`.
+
+**Severity.** Mark a test `@pytest.mark.severity("warn")`, or give a config case
+`severity: warn`. A failing warn-level check is stored as `warn`, listed under "warn-level
+checks that failed" at the end of the run, and does not fail the run. Everything else is `error`.
+
+**Observed vs expected.** Parity, rollup values and freshness, fan-out and row-value checks
+already record what they saw. In your own tests, take the `dq` fixture:
+
+```python
+def test_orders_volume(cube, default_claims, dq):
+    got = ...
+    dq.observe(observed=got, expected=1000)
+    assert got >= 1000
+```
+
+**From Airflow**, run the suite in a task after the dbt run and the rollup refresh, with
+`SEMTEST_RESULTS=bigquery`, `CI_RUN_ID={{ run_id }}` and `SEMTEST_ENVIRONMENT=prod`. A
+downstream task can then read the latest statuses for the run, using the queries in
+`sql/check_results.sql`.
 
 ## Assumptions to check against your deployment
 

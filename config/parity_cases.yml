@@ -11,6 +11,14 @@
 # Prefer bounded date ranges over all-time totals: they are cheaper, stable once a period
 # closes, and catch time-zone and calendar bugs that all-time totals hide.
 #
+# Environments: write tables as `${project}.${gold_dataset}.table`. The values come from
+# suite.yml › sql_vars, and pre-prod overrides them (SEMTEST_VAR_GOLD_DATASET=gold_staging), so
+# the same case checks whichever dataset that environment's Cube reads.
+#
+# Dates: a dateRange may be a relative name (last_complete_month, last_7_complete_days, ...; see
+# semtest/cases.py). Its resolved bounds are ${date_from} and ${date_to} in the SQL. Keep golden
+# numbers on fixed, closed periods: a finance close belongs to one month.
+#
 # Time zone: Cube buckets time in the query's `timezone` (UTC if omitted). The reference SQL must
 # bucket in the same zone, e.g. DATE(order_ts, 'Australia/Sydney').
 
@@ -30,7 +38,7 @@ cases:
     abs_tol: 1.00
 
   # ------------------------------------------------------------ grouped + time-bucketed parity
-  - id: revenue_by_state_by_month_q3_2026
+  - id: revenue_by_state_by_month_last_quarter
     persona: ci_reader
     owner: sales-analytics@yourco.example
     cube_query:
@@ -39,7 +47,7 @@ cases:
       timeDimensions:
         - dimension: revenue.order_date
           granularity: month
-          dateRange: [2026-07-01, 2026-09-30]
+          dateRange: last_complete_quarter
       timezone: Australia/Sydney
     bigquery_sql: |
       SELECT
@@ -47,8 +55,8 @@ cases:
         DATE_TRUNC(DATE(order_ts, 'Australia/Sydney'), MONTH) AS order_month,
         SUM(net_amount)                                        AS net_revenue,
         COUNT(*)                                               AS order_count  -- grain: one row per order
-      FROM `your-project.gold.fct_orders`
-      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-07-01' AND '2026-09-30'
+      FROM `${project}.${gold_dataset}.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '${date_from}' AND '${date_to}'
         AND is_test_order = FALSE
       GROUP BY 1, 2
     keys:
@@ -59,7 +67,7 @@ cases:
       revenue.order_count: order_count
 
   # ------------------------------------------------------------ rolling window (value, not existence)
-  - id: revenue_trailing_12m_at_sep_2026
+  - id: revenue_trailing_12m_last_month
     persona: ci_reader
     owner: sales-analytics@yourco.example
     cube_query:
@@ -67,12 +75,13 @@ cases:
       timeDimensions:
         - dimension: revenue.order_date
           granularity: month
-          dateRange: [2026-09-01, 2026-09-30]
+          dateRange: last_complete_month
       timezone: Australia/Sydney
     bigquery_sql: |
-      SELECT DATE '2026-09-01' AS order_month, SUM(net_amount) AS t12m
-      FROM `your-project.gold.fct_orders`
-      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2025-10-01' AND '2026-09-30'
+      SELECT DATE '${date_from}' AS order_month, SUM(net_amount) AS t12m
+      FROM `${project}.${gold_dataset}.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney')
+            BETWEEN DATE_SUB(DATE '${date_from}', INTERVAL 11 MONTH) AND '${date_to}'
         AND is_test_order = FALSE
     keys:
       revenue.order_date.month: order_month
@@ -80,7 +89,7 @@ cases:
       revenue.net_revenue_trailing_12m: t12m
 
   # ------------------------------------------------------------ prior period (time_shift)
-  - id: revenue_prior_year_for_sep_2026
+  - id: revenue_prior_year_last_month
     persona: ci_reader
     owner: sales-analytics@yourco.example
     cube_query:
@@ -88,12 +97,14 @@ cases:
       timeDimensions:
         - dimension: revenue.order_date
           granularity: month
-          dateRange: [2026-09-01, 2026-09-30]
+          dateRange: last_complete_month
       timezone: Australia/Sydney
     bigquery_sql: |
-      SELECT DATE '2026-09-01' AS order_month, SUM(net_amount) AS prior_year
-      FROM `your-project.gold.fct_orders`
-      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2025-09-01' AND '2025-09-30'
+      SELECT DATE '${date_from}' AS order_month, SUM(net_amount) AS prior_year
+      FROM `${project}.${gold_dataset}.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney')
+            BETWEEN DATE_SUB(DATE '${date_from}', INTERVAL 1 YEAR)
+                AND DATE_SUB(DATE '${date_to}', INTERVAL 1 YEAR)
         AND is_test_order = FALSE
     keys:
       revenue.order_date.month: order_month
@@ -110,12 +121,12 @@ cases:
       measures: [revenue.net_revenue]
       timeDimensions:
         - dimension: revenue.order_date
-          dateRange: [2026-10-01, 2026-10-31]
+          dateRange: last_complete_month
       timezone: Australia/Sydney
     bigquery_sql: |
       SELECT SUM(net_amount) AS net_revenue
-      FROM `your-project.gold.fct_orders`
-      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '2026-10-01' AND '2026-10-31'
+      FROM `${project}.${gold_dataset}.fct_orders`
+      WHERE DATE(order_ts, 'Australia/Sydney') BETWEEN '${date_from}' AND '${date_to}'
         AND state = 'NSW' AND is_test_order = FALSE
     keys: {}
     values:

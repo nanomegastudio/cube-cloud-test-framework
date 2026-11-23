@@ -11,7 +11,7 @@ import datetime as dt
 import pytest
 
 from semtest.freshness import freshness_granularity, freshness_problems, period_start
-from tests.unit.fakes import fake_cube
+from tests.unit.fakes import fake_cube, fake_dq
 
 pytestmark = pytest.mark.unit
 
@@ -55,7 +55,7 @@ class _BQ:
 
 def _run_real_test(cube):
     from tests.data.test_rollups import test_rollup_is_fresh
-    test_rollup_is_fresh(cube, {"ci_reader": {"claims": {}}}, _BQ(), CASE)
+    test_rollup_is_fresh(cube, {"ci_reader": {"claims": {}}}, _BQ(), CASE, fake_dq())
 
 
 def test_stale_monthly_rollup_now_fails() -> None:

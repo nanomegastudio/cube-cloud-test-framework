@@ -14,9 +14,33 @@ from typing import Any
 import pytest
 
 from semtest import config
+from semtest import meta as m
 from semtest.cube import DEFAULT_ROW_LIMIT, ControlPlane, CubeClient
+# Results recording (no-op unless suite.yml › results or SEMTEST_RESULTS turns it on).
+from semtest.pytest_results import (  # noqa: F401  (pytest finds hooks and fixtures by name)
+    dq, pytest_configure, pytest_runtest_makereport, pytest_sessionfinish,
+    pytest_terminal_summary, set_owner)
 
 config.load_dotenv()
+
+
+@pytest.fixture(autouse=True)
+def _owner_from_view_meta(request) -> None:
+    """For a check parametrized by `view`, default its stored owner to the view's meta.owner.
+
+    Only looks when a Cube client is already in use by the test, so unit and config-only tests
+    never touch the network.
+    """
+    params = getattr(getattr(request.node, "callspec", None), "params", {})
+    view = params.get("view")
+    uses_cube = "storefront_meta" in request.fixturenames or "meta_for" in request.fixturenames
+    if not view or not uses_cube:
+        return
+    try:
+        entry = m.get(request.getfixturevalue("storefront_meta"), view)
+    except (pytest.skip.Exception, Exception):  # noqa: BLE001 - owner is best-effort
+        return
+    set_owner(request.node, ((entry or {}).get("meta") or {}).get("owner"))
 
 
 @pytest.fixture(scope="session")

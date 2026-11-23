@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from semtest import config
+from semtest import cases, config
 from semtest import meta as m
 
 pytestmark = pytest.mark.data
@@ -40,7 +40,7 @@ def _total(rows, measure):
 
 @pytest.mark.parametrize("view", VIEWS)
 def test_joined_dimensions_do_not_inflate_totals(cube, storefront_meta, suite_cfg,
-                                                 default_claims, tol, view) -> None:
+                                                 default_claims, tol, view, dq) -> None:
     v = m.get(storefront_meta, view)
     if v is None:
         pytest.fail(f"{view} is not published")
@@ -53,7 +53,7 @@ def test_joined_dimensions_do_not_inflate_totals(cube, storefront_meta, suite_cf
     abs_tol, rel_tol = tol
     # Same bounded window as smoke, to cap BigQuery cost; both queries use the identical window.
     tds = m.time_dimensions(v)
-    rng = suite_cfg.get("smoke_date_range")
+    rng = cases.smoke_window(suite_cfg)
     window = [{"dimension": tds[0]["name"], "dateRange": rng}] if (tds and rng) else []
     problems = []
     for measure, dim in pairs:
@@ -66,4 +66,6 @@ def test_joined_dimensions_do_not_inflate_totals(cube, storefront_meta, suite_cf
         if abs(split - grand) > max(abs_tol, rel_tol * abs(grand)):
             direction = "INFLATED (fan-out)" if split > grand else "SHRANK (rows dropped by join)"
             problems.append(f"{measure} by {dim}: {grand:,.2f} -> {split:,.2f} {direction}")
+    dq.observe(observed={"pairs_checked": len(pairs), "pairs_failing": len(problems)},
+               expected={"pairs_failing": 0})
     assert not problems, f"{view}:\n  " + "\n  ".join(problems)

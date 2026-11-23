@@ -18,7 +18,8 @@ RESTRICTED = sorted(n for n, p in config.personas().items() if p.get("row_values
 
 @pytest.mark.parametrize("persona", RESTRICTED)
 @pytest.mark.parametrize("view", VIEWS)
-def test_only_allowed_values_come_back(cube, meta_for, suite_cfg, personas, persona, view) -> None:
+def test_only_allowed_values_come_back(cube, meta_for, suite_cfg, personas, persona, view,
+                                       dq) -> None:
     meta = meta_for(persona)
     v = m.get(meta, view)
     if v is None:
@@ -37,6 +38,7 @@ def test_only_allowed_values_come_back(cube, meta_for, suite_cfg, personas, pers
                              personas[persona]["claims"])
         returned = {r[dim["name"]] for r in rows}
         leaked = returned - {str(a) for a in allowed}
+        dq.observe(observed=sorted(returned, key=str), expected=sorted(map(str, allowed)))
         assert not leaked, f"{persona} on {view} received {dim['name']} values {sorted(leaked)}"
         checked = True
     if not checked:

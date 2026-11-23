@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from semtest.cube import CubeError, TruncatedResult
-from tests.unit.fakes import fake_cube
+from tests.unit.fakes import fake_cube, fake_dq
 
 pytestmark = pytest.mark.unit
 
@@ -57,4 +57,4 @@ def test_fanout_reports_truncation_not_shrank() -> None:
         "dimensions": [{"name": "v.state", "type": "string", "aliasMember": "base_stores.state"}],
     }]}
     with pytest.raises(TruncatedResult):
-        fanout(cube, meta, {"fanout": {}}, {}, (0.01, 1e-6), "v")
+        fanout(cube, meta, {"fanout": {}}, {}, (0.01, 1e-6), "v", fake_dq())
