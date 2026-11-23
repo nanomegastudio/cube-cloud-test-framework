@@ -1,0 +1,1485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cube Semantic Tests</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#ffffff; --panel-2:#f6f6f2; --ink:#1c1917; --ink-2:#36322f; --ink-3:#57534e;
+  --line:#deded4; --accent:#2f5d3a; --accent-soft:#e6ebdc; --ok:#2f5d3a; --ok-soft:#e6ebdc;
+  --bad:#9e5530; --bad-soft:#f3e6dc; --warn:#76592a; --warn-soft:#f3ecdc; --code-bg:#f3f3ef;
+  --cube:#2f5d3a; --bq:#3f7a72; --store:#a65d33; --flow:#c97a45; --on:#1c1917;
+  --radius:14px; --shadow:0 2px 6px rgba(28,25,23,.05),0 8px 24px rgba(28,25,23,.06);
+  --hero:#eef0e4;
+  --bgimg:none;
+  --py:#f2ebda; --cubef:#e7ebdc; --bqf:#e0ebe9; --storef:#f2e4d9;
+}
+:root[data-theme="dark"]{
+    --bg:#141210; --panel:#1f1c19; --panel-2:#2a2622; --ink:#f7f6f2; --ink-2:#e2ded7; --ink-3:#c4bdb3;
+    --line:#3a352f; --accent:#a9bb7c; --accent-soft:#283312; --ok:#a9bb7c; --ok-soft:#24300f;
+    --bad:#d9a07c; --bad-soft:#3d2410; --warn:#d6c084; --warn-soft:#3a2e0c; --code-bg:#26221e;
+    --cube:#a9bb7c; --bq:#8bbab4; --store:#d39570; --flow:#c97a45; --on:#1c1917; --shadow:0 6px 24px rgba(0,0,0,.4);
+    --hero:#25271f;
+    --bgimg:none;
+    --py:#3a2e0c; --cubef:#283312; --bqf:#123631; --storef:#3a220f;
+}
+html{background:var(--bg)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background-color:var(--bg);background-image:var(--bgimg);background-attachment:fixed;color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",Menlo,monospace;font-size:13px}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;margin:10px 0;line-height:1.45}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+h1,h2,h3{line-height:1.25;margin:0 0 .5em}
+h2{font-size:24px} h3{font-size:17px;margin-top:1.2em}
+p{margin:.5em 0 .8em}
+.muted{color:var(--ink-3)}
+.lead{font-size:16.5px;color:var(--ink-2);max-width:72ch}
+
+/* shell */
+header.top{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:1px solid var(--line);}
+.top-in{display:flex;align-items:center;gap:14px;padding:10px 20px}
+.brand{font-weight:650;font-size:15px;white-space:nowrap}
+.brand small{font-weight:400;color:var(--ink-3);margin-left:6px}
+.progress{flex:1;height:6px;background:var(--panel-2);border-radius:99px;overflow:hidden;min-width:60px}
+.progress>i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.stepcount{font-size:13px;color:var(--ink-3);white-space:nowrap}
+.iconbtn{background:none;border:1px solid var(--line);color:var(--ink-2);border-radius:8px;padding:5px 9px;cursor:pointer;font:inherit;font-size:13px}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.side{position:sticky;top:51px;align-self:start;height:calc(100vh - 51px);overflow:auto;padding:18px 10px 18px 16px;border-right:1px solid var(--line)}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.side li{counter-increment:s}
+nav.side button{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink-2);font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;cursor:pointer}
+nav.side button::before{content:counter(s);flex:0 0 22px;height:22px;border-radius:50%;background:var(--panel-2);color:var(--ink-3);font-size:12px;display:grid;place-items:center;margin-top:1px}
+nav.side button:hover{background:var(--panel-2)}
+nav.side button.on{background:var(--accent-soft);color:var(--ink);font-weight:600}
+nav.side button.on::before{background:var(--accent);color:#fff}
+nav.side button.seen::before{content:"✓";background:var(--ok-soft);color:var(--ok)}
+nav.side button.on.seen::before{content:counter(s);background:var(--accent);color:#fff}
+main{padding:28px 32px 40px;min-width:0}
+section.step{display:none;animation:fade .25s ease}
+section.step.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:6px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:36px;padding-top:18px;border-top:1px solid var(--line)}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.sm{padding:5px 10px;font-size:13px}
+.hint{font-size:12.5px;color:var(--ink-3)}
+
+/* cards & bits */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);margin:14px 0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid2>.card,.grid3>.card{margin:0}
+.grid2>*,.grid3>*,.annot>*,.ba>*{min-width:0}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--panel-2);color:var(--ink-2);border:1px solid var(--line);margin:2px 4px 2px 0;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.acc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;color:var(--ink-3);font-weight:600}
+.tablewrap{overflow-x:auto}
+.result{border-radius:8px;padding:10px 12px;margin-top:10px;font-size:14px}
+.result.ok{background:var(--ok-soft);color:var(--ok)}
+.result.bad{background:var(--bad-soft);color:var(--bad)}
+.result.warn{background:var(--warn-soft);color:var(--warn)}
+.result pre{background:transparent;border:0;padding:0;margin:4px 0 0;color:inherit;white-space:pre-wrap}
+label.f{display:block;font-size:13px;color:var(--ink-2);margin-bottom:10px}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+label.f textarea{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:13px;min-height:84px}
+label.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:6px 0;cursor:pointer}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{background:var(--panel);border:0;border-right:1px solid var(--line);color:var(--ink-2);padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14.5px}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--ink-3)} .kv dd{margin:0}
+
+/* tiers */
+.tiers{display:flex;flex-direction:column;gap:8px}
+.tier{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.tier:hover{border-color:var(--accent)}
+.tier.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.tier b{font-family:ui-monospace,Consolas,monospace;font-size:14px}
+.cost{display:flex;gap:3px}
+.cost i{width:10px;height:10px;border-radius:2px;background:var(--panel-2);border:1px solid var(--line)}
+.cost i.f{background:var(--flow);border-color:var(--flow)}
+
+/* config tabs */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-top:8px}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-2);font:inherit;font-size:14px;padding:8px 12px;cursor:pointer;margin-bottom:-1px}
+.tabs button.on{border-color:var(--accent);color:var(--ink);font-weight:600}
+.tabpane{display:none} .tabpane.on{display:block}
+.annot{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;margin-top:12px}
+.annot pre{margin:0;max-height:520px}
+.yk{color:var(--cube)} .yc{color:var(--ink-3)} .ys{color:var(--ok)}
+.hl{background:var(--warn-soft);outline:1px solid var(--warn);border-radius:3px}
+.keylist{display:flex;flex-direction:column;gap:6px}
+.keylist button{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
+.keylist button:hover,.keylist button.on{border-color:var(--accent)}
+.keylist button code{font-weight:600}
+.keylist button span{display:block;color:var(--ink-3);font-size:12.5px;margin-top:2px}
+
+/* jwt */
+.jwt{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.5;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg)}
+.jwt .h{color:var(--bad)} .jwt .p{color:var(--cube)} .jwt .s{color:var(--bq)}
+.vmatrix td.c{text-align:center;font-size:15px}
+
+/* flow svg */
+.flowwrap{overflow-x:auto}
+svg.flow{width:100%;min-width:640px;height:auto;display:block}
+svg.flow .node rect{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+svg.flow .node text{fill:var(--ink);font-size:13px;font-family:system-ui,sans-serif}
+svg.flow .node text.sub{fill:var(--ink-3);font-size:11px}
+svg.flow .node.cube rect{stroke:var(--cube)} svg.flow .node.bq rect{stroke:var(--bq)} svg.flow .node.store rect{stroke:var(--store)}
+svg.flow .node.lit rect{stroke-width:3;fill:var(--accent-soft)}
+svg.flow .edge{stroke:var(--line);stroke-width:2;fill:none}
+svg.flow .edge.lit{stroke:var(--flow);stroke-width:3;stroke-dasharray:7 5;animation:dash 0.8s linear infinite}
+svg.flow .elabel{fill:var(--ink-3);font-size:11px;font-family:ui-monospace,Consolas,monospace}
+svg.flow .elabel.lit{fill:var(--flow);font-weight:700}
+@keyframes dash{to{stroke-dashoffset:-24}}
+svg.flow marker path{fill:var(--line)}
+
+/* ci */
+.pipe{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin:10px 0}
+.pipe .stage{flex:1 1 140px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;position:relative}
+.pipe .stage:hover,.pipe .stage.on{border-color:var(--accent)}
+.pipe .stage.on{box-shadow:0 0 0 2px var(--accent-soft)}
+.pipe .stage b{display:block;font-size:14px}
+.pipe .stage small{color:var(--ink-3);font-size:12px}
+.pipe .arrow{align-self:center;color:var(--ink-3)}
+
+/* bug cards */
+.bugnav{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.bugnav button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:6px 13px;font:inherit;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.bugnav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ba>div{border-radius:10px;padding:12px 14px;border:1px solid var(--line);background:var(--panel)}
+.ba h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.ba .before h4{color:var(--bad)} .ba .after h4{color:var(--ok)}
+.minihead{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}.minihead.bad{color:var(--bad)}.minihead.ok{color:var(--ok)}
+svg.flow .edge{stroke:var(--ink-3);opacity:.55}svg.flow .edge.lit{opacity:1}svg.flow marker path{fill:var(--ink-3)}
+
+/* data tables in sims */
+.mini th,.mini td{padding:4px 8px;font-size:13px}
+.mini td.num{text-align:right;font-variant-numeric:tabular-nums}
+.mini tr.dup td{background:var(--bad-soft)}
+.bigsum{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+
+@media (max-width: 860px){
+  .layout{grid-template-columns:1fr}
+  nav.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px 16px;overflow-x:auto}
+  nav.side ol{display:flex;gap:4px}
+  nav.side button{white-space:nowrap;padding:6px 8px}
+  main{padding:20px 16px 32px}
+  .grid2,.grid3,.annot,.ba{grid-template-columns:1fr}
+  .top-in{padding:10px 16px}
+  .brand small{display:none}
+  .tier{grid-template-columns:80px 1fr}
+  .tier .cost{display:none}
+}
+
+/* ---------- colour layer: lime + orange, six colours ---------- */
+header.top{background:#2f5d3a;border-bottom:0;color:#fff}
+.brand,.stepcount{color:#fff}.brand small{color:#d6dccd}
+.progress{background:rgba(255,255,255,.2)}.progress>i{background:#d4a84a}
+.iconbtn{border-color:rgba(255,255,255,.45);color:#fff}
+nav.side{border-right:0}
+nav.side button{color:var(--ink-2)}
+nav.side button::before{background:color-mix(in srgb,var(--c) 30%,var(--panel));color:var(--on);font-weight:700}
+nav.side button.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 3px 0 0 var(--c)}
+nav.side button.on::before,nav.side button.on.seen::before{background:var(--c);color:var(--on)}
+nav.side button.seen::before{background:var(--ok-soft);color:var(--ok)}
+.eyebrow{display:inline-block;background:var(--sc,var(--accent));color:var(--on);padding:3px 10px;border-radius:99px;letter-spacing:.06em}
+section.step h2{font-size:27px;color:var(--ink)}
+section.step .lead{color:var(--ink-2)}
+section.step>h2::after{content:"";display:block;width:56px;height:4px;border-radius:4px;margin-top:10px;background:#d07a3c}
+.card{border-top:4px solid var(--sc,var(--accent))}
+.card.c-blue{border-top-color:#5c9c94}.card.c-violet{border-top-color:#7f9a45}.card.c-orange{border-top-color:#c97a45}
+.btn.primary,.btn.primary:disabled{background:var(--sc,#7f9a45);border-color:var(--sc,#7f9a45);color:var(--on);font-weight:600}
+.seg button.on{background:var(--sc,#7f9a45);color:var(--on);font-weight:600}
+.tabs button.on{border-color:var(--sc,var(--accent))}
+.tier.on,.pipe .stage.on,.keylist button.on{border-color:var(--sc,var(--accent));box-shadow:0 0 0 3px color-mix(in srgb,var(--sc,var(--accent)) 30%,transparent)}
+.tier:nth-child(1){border-left:5px solid #7f9a45}.tier:nth-child(2){border-left:5px solid #5c9c94}.tier:nth-child(3){border-left:5px solid #cfa955}.tier:nth-child(4){border-left:5px solid #c97a45}.tier:nth-child(5){border-left:5px solid #2f5d3a}
+.pipe .stage{border-top:4px solid var(--sc,var(--accent))}
+.callout{border-left-color:var(--sc,var(--accent));background:color-mix(in srgb,var(--sc,var(--accent)) 14%,var(--panel));color:var(--ink)}
+.callout.warn{border-left-color:#cfa955;background:var(--warn-soft)}
+.result{border-left:4px solid currentColor}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+a{color:var(--accent)}
+svg.flow .node[data-n="py"] rect{fill:var(--py);stroke:#cfa955}
+svg.flow .node.cube rect{fill:var(--cubef);stroke:#7f9a45} svg.flow .node.bq rect{fill:var(--bqf);stroke:#5c9c94} svg.flow .node.store rect{fill:var(--storef);stroke:#c97a45}
+svg.flow .node[data-n="bqr"] rect{fill:var(--bqf)}
+svg.flow .node.lit rect{stroke-width:3.5;filter:drop-shadow(0 0 6px rgba(201,122,69,.45))}
+svg.flow .elabel{fill:var(--ink-3)}
+.hero{display:flex;gap:20px;align-items:center;background:var(--hero);border-radius:18px;padding:24px 26px;margin-bottom:18px}
+.hero h2{margin:0 0 6px}.hero .lead{margin:0;color:var(--ink-2)}
+.hero-emoji{font-size:54px;line-height:1;flex:0 0 auto}
+.incidents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.incident{background:var(--panel);border-radius:14px;border:1px solid var(--line);border-left:6px solid var(--ic);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.incident.open{background:color-mix(in srgb,var(--ic) 9%,var(--panel))}
+.inc-top{display:flex;gap:12px;align-items:flex-start}
+.inc-emoji{font-size:28px;width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--ic) 25%,transparent)}
+.inc-who{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.inc-msg{font-size:15px;font-weight:550;margin-top:2px;color:var(--ink)}
+.inc-btn{margin-top:10px;background:color-mix(in srgb,var(--ic) 22%,var(--panel));border:1px solid var(--ic);color:var(--ink);border-radius:99px;padding:4px 12px;font:inherit;font-size:13px;cursor:pointer;font-weight:600}
+.inc-btn:hover{background:var(--ic);color:var(--on)}
+.inc-why p{margin:10px 0 6px;font-size:14px;color:var(--ink)}
+.inc-caught{font-size:13px;color:var(--ink-3)} .inc-caught a{text-decoration:none}
+.punch{margin:22px 0 8px;padding:18px 22px;border-radius:16px;background:#2f5d3a;color:#fff}
+.punch b{color:#e4ead2}
+.punch-big{font-size:22px;font-weight:700}.punch p{margin:6px 0 0;max-width:80ch;color:#f7f6f2}
+.analogy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:14px;border:2px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,var(--panel));font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:center;transition:transform .15s}
+.tile:hover{transform:translateY(-2px)}
+.tile.on{background:var(--tc);color:var(--on);border-color:var(--tc)}
+.tile-e{font-size:30px;line-height:1}
+.tile-detail{margin:0;min-height:300px}
+.tile-big{font-size:48px;line-height:1}
+.an-row{margin:10px 0}.an-row p{margin:6px 0 0}
+.an-label{display:inline-block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 9px;border-radius:99px;background:var(--panel-2);color:var(--ink-2)}
+.an-row .an-label[style]{color:var(--on)}
+.bugnav button{color:var(--ink-2)}
+.bugnav button.on{background:var(--sc,#7f9a45);border-color:var(--sc,#7f9a45);color:var(--on);font-weight:600}
+.ba .before h4{color:var(--bad)} .ba .after h4{color:var(--ok)}
+.minihead{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}.minihead.bad{color:var(--bad)}.minihead.ok{color:var(--ok)}
+svg.flow .edge{stroke:var(--ink-3);opacity:.55}svg.flow .edge.lit{opacity:1}svg.flow marker path{fill:var(--ink-3)}
+.yk{color:#2f5d3a}.ys{color:#9e5530}
+:root[data-theme="dark"] .yk{color:#a9bb7c}:root[data-theme="dark"] .ys{color:#d9a07c}
+@media (max-width:860px){.incidents,.analogy{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.hero{flex-direction:column;align-items:flex-start;padding:18px}.hero-emoji{font-size:40px}}
+
+/* ---------- CI step: colour-coded stages and animated arrows ---------- */
+.cilegend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 4px;font-size:13px;color:var(--ink-2)}
+.cilegend span{display:inline-flex;align-items:center;gap:6px}.cilegend i{width:14px;height:14px;border-radius:4px;background:var(--k)}
+.cilane{border-radius:16px;padding:12px 14px 14px;margin:14px 0;background:color-mix(in srgb,var(--lane) 10%,var(--panel));border:2px solid color-mix(in srgb,var(--lane) 45%,transparent)}
+.cilane-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.cilane-head h3{margin:0}
+.cilane .ciplay{background:var(--lane);border-color:var(--lane);color:var(--on);font-weight:600}
+.cilane .ciplay:disabled{opacity:.55}
+.cipipe{align-items:stretch;margin-bottom:0;flex-wrap:nowrap;gap:4px}
+.cipipe .stage{flex:1 1 0;min-width:0;padding:10px;border:2px solid var(--k);border-top-width:6px;background:color-mix(in srgb,var(--k) 14%,var(--panel));transition:transform .2s,box-shadow .2s,background .3s;position:relative}
+.cipipe .stage:hover{transform:translateY(-2px)}
+.cipipe .stage b{font-size:13.5px;overflow-wrap:anywhere;hyphens:manual}
+.cipipe .stage{padding-right:28px}.cipipe .stage .kicon{position:absolute;top:8px;right:7px;font-size:16px;line-height:1}
+.cipipe .stage.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--k) 40%,transparent)}
+.cipipe .stage.run{background:var(--k);color:var(--on);animation:pulse 1s ease-in-out infinite}
+.cipipe .stage.run small{color:var(--on)}
+.cipipe .stage.done::after{content:"✓";position:absolute;top:-11px;left:-9px;width:22px;height:22px;border-radius:50%;background:#2f5d3a;color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--panel)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--k) 60%,transparent)}50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--k) 0%,transparent)}}
+.flowarrow{flex:0 0 38px;height:14px;position:relative;align-self:center}
+.flowarrow i{position:absolute;left:0;right:9px;top:5px;height:4px;border-radius:4px;
+  background:repeating-linear-gradient(90deg,var(--b) 0 9px,transparent 9px 16px);background-size:32px 4px;animation:flow .7s linear infinite}
+.flowarrow::after{content:"";position:absolute;right:0;top:0;border-left:11px solid var(--b);border-top:7px solid transparent;border-bottom:7px solid transparent}
+.flowarrow.go i{animation-duration:.25s;height:6px;top:4px}
+@keyframes flow{to{background-position:32px 0}}
+.cidone{margin:10px 0 0;font-weight:600;color:var(--ok)}
+@media (max-width:860px){.cipipe{flex-direction:column;align-items:stretch}.cipipe .stage{flex:0 0 auto}
+  .flowarrow{flex:0 0 26px;width:14px;height:26px;align-self:center;transform:none}
+  .flowarrow i{left:5px;right:auto;top:0;bottom:9px;width:4px;height:auto;background:repeating-linear-gradient(180deg,var(--b) 0 9px,transparent 9px 16px);background-size:4px 32px;animation:flowv .7s linear infinite}
+  .flowarrow.go i{width:4px;height:auto}
+  .flowarrow::after{right:auto;left:0;top:auto;bottom:0;border-top:11px solid var(--b);border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:0}}
+@keyframes flowv{to{background-position:0 32px}}
+@media (prefers-reduced-motion:reduce){.flowarrow i,.cipipe .stage.run{animation:none}}
+
+/* ================= editorial layer: article-style reading layout ================= */
+html{overflow-x:clip}
+:root{--serif:Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --col:720px;--wide:min(1040px,calc(100vw - 32px))}
+body{font-family:var(--sans);font-size:15px;background:var(--bg)}
+/* header: quiet, white, thin progress rule */
+header.top{background:var(--bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.top-in{max-width:1040px;margin:0 auto;padding:12px 24px;position:relative}
+.brand{font-family:var(--serif);font-size:19px;font-weight:700;color:var(--ink)}
+.brand small{font-family:var(--sans);font-size:13px;font-weight:400;color:var(--ink-3)}
+.stepcount{color:var(--ink-3);font-size:13px;margin-left:auto}
+.progress{position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:0;background:transparent;min-width:0}
+.progress>i{background:var(--accent)}
+.top-in .spacer{flex:1}
+.iconbtn{border:1px solid var(--line);color:var(--ink-2);border-radius:99px;padding:5px 12px;font-family:var(--sans);font-size:13px;background:transparent}
+.iconbtn:hover{border-color:var(--ink-2);color:var(--ink)}
+/* single centred reading column; table of contents is a drawer */
+.layout{display:block;max-width:none}
+nav.side{position:fixed;top:0;left:0;bottom:0;height:auto;width:300px;max-width:85vw;z-index:30;background:var(--bg);border-right:1px solid var(--line);
+  padding:72px 14px 24px;overflow:auto;transform:translateX(-102%);transition:transform .25s ease;box-shadow:none}
+body.toc-open nav.side{transform:none;box-shadow:0 0 0 100vmax rgba(28,25,23,.25)}
+nav.side ol{display:block}
+nav.side button{white-space:normal;font-family:var(--sans);font-size:14.5px;padding:8px 10px;border-radius:4px}
+nav.side button.on{box-shadow:inset 2px 0 0 var(--accent)}
+main{max-width:calc(var(--col) + 48px);margin:0 auto;padding:56px 24px 72px}
+/* type */
+section.step p,section.step li,section.step .lead,.inc-why p,.an-row p,.punch p{font-family:var(--serif)}
+section.step p,section.step li{font-size:20px;line-height:1.65;color:var(--ink);letter-spacing:-.003em}
+section.step .lead{font-size:21px;line-height:1.6;color:var(--ink-2);max-width:none;margin:12px 0 28px}
+section.step h2{font-family:var(--sans);font-size:40px;line-height:1.15;font-weight:700;letter-spacing:-.022em;margin:6px 0 0}
+section.step>h2::after{display:none}
+section.step h3{font-family:var(--sans);font-size:22px;font-weight:700;letter-spacing:-.012em;margin:40px 0 8px}
+.eyebrow{background:none;color:var(--ink-3);padding:0;border-radius:0;font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.08em;margin-bottom:10px}
+code{font-size:.82em;background:var(--code-bg);border-radius:3px;padding:1px 4px}
+pre{background:var(--code-bg);border:0;border-radius:4px;padding:16px 18px;font-size:13.5px}
+/* UI text inside widgets stays sans and smaller */
+.card p,.card li,.result,.tablewrap td,.tablewrap th,.hint,label.f,label.chk,.kv,.inc-why p,.an-row p,.ba>div,.callout,.tile-detail p{font-family:var(--sans);font-size:15px;line-height:1.55}
+.card p,.inc-why p,.an-row p{color:var(--ink)}
+.hint{font-size:13px}
+/* shapes: fewer boxes, small radii, no shadows */
+.card{border:0;border-top:0;border-radius:4px;background:var(--panel-2);box-shadow:none;padding:18px 20px}
+.card.c-blue,.card.c-violet,.card.c-orange{border-top:0}
+.grid2,.grid3{gap:12px}
+.callout{background:transparent;border-left:3px solid var(--ink);border-radius:0;padding:2px 0 2px 22px;margin:32px 0;font-family:var(--serif);font-style:italic;font-size:21px;line-height:1.6;color:var(--ink-2)}
+.callout b,.callout code{font-style:normal}
+.callout.warn{border-left-color:var(--warn);background:transparent}
+.result{border-radius:3px;border-left-width:3px}
+.btn{border-radius:99px;font-family:var(--sans);padding:8px 18px;border-color:var(--line);background:transparent}
+.btn.sm{padding:5px 13px}
+.btn.primary,.btn.primary:disabled,.cilane .ciplay{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:500}
+.seg{border:0;gap:6px;border-radius:0;overflow:visible}
+.seg button{border:1px solid var(--line);border-radius:99px;padding:5px 13px;font-family:var(--sans);font-size:13.5px;background:transparent;color:var(--ink-2)}
+.seg button:last-child{border-right:1px solid var(--line)}
+.seg button.on{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+.tabs{gap:18px}
+.tabs button{padding:8px 0;font-family:var(--sans)}
+.tabs button.on{border-color:var(--ink)}
+.bugnav button{border-radius:99px;font-family:var(--sans)}
+.bugnav button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pill{border-radius:99px;font-family:var(--sans)}
+.tier{border-radius:4px;border:1px solid var(--line);background:transparent}
+.pipe .stage{border-radius:4px}
+.keylist button{border-radius:4px}
+label.f input,label.f select,label.f textarea{border-radius:4px}
+table{font-family:var(--sans)}
+.pager{border-top:1px solid var(--line);margin-top:56px}
+/* opening sections */
+.hero{display:block;background:transparent;border-radius:0;padding:0;margin:0 0 8px}
+.hero-emoji{font-size:34px;margin-bottom:14px}
+.hero h2{margin:0}
+.incidents{grid-template-columns:1fr;gap:0;margin:8px 0}
+.incident{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;padding:22px 0 22px;border-left:0}
+.incident.open{background:transparent}
+.inc-emoji{width:40px;height:40px;flex-basis:40px;border-radius:50%;font-size:20px}
+.inc-msg{font-family:var(--serif);font-size:21px;line-height:1.45;font-weight:400;font-style:italic}
+.inc-btn{border-radius:99px;background:transparent;border-color:var(--line);font-family:var(--sans);margin-left:52px}
+.inc-btn:hover{background:var(--panel-2);color:var(--ink)}
+.inc-why{margin-left:52px}
+.inc-why p{font-family:var(--serif);font-size:18px}
+.punch{background:transparent;color:var(--ink);border-radius:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:32px 0;margin:24px 0 32px;text-align:center}
+.punch-big{font-family:var(--sans);font-size:30px;letter-spacing:-.02em;color:var(--ok)}
+.punch p{color:var(--ink-2);margin:10px auto 0;max-width:600px;font-size:20px;line-height:1.6}
+.punch b{color:var(--ink)}
+.tiles{gap:8px}
+.tile{border-radius:6px;border-width:1px;padding:14px 8px}
+.tile-detail{border-radius:4px}
+.an-label{border-radius:99px}
+/* wide figures break out of the reading column */
+.analogy,.flowwrap,.cilane,#rollPipe,.incidents+.punch+.grid3{width:var(--wide);margin-left:calc((100% - var(--wide)) / 2)}
+.flowwrap.card{background:transparent;padding:0}
+.cilane{border-radius:6px;border-width:1px}
+@media (max-width:860px){
+  main{padding:32px 16px 48px}
+  section.step h2{font-size:30px}
+  section.step p,section.step li{font-size:18px}
+  section.step .lead,.callout{font-size:19px}
+  .brand small{display:none}
+  .inc-btn,.inc-why{margin-left:0}
+  .analogy,.flowwrap,.cilane,#rollPipe,.incidents+.punch+.grid3{width:auto;margin-left:0}
+  nav.side ol{display:block} nav.side{border-bottom:0;padding:72px 14px 24px}
+}
+
+section.step .card p,section.step .card li,section.step p.hint,section.step .hint,section.step .result,section.step .ba>div,section.step .tile-detail p,section.step .an-row p,section.step .inc-caught{font-family:var(--sans);font-size:15px;line-height:1.55}
+section.step p.hint{font-size:13.5px;color:var(--ink-3)}
+section.step .inc-why p{font-family:var(--serif);font-size:18px;line-height:1.6}
+section.step .cilane-head h3{margin:0;font-size:19px}
+section.step .card h3{margin-top:0;font-size:19px}
+@media (max-width:860px){.toclabel{display:none}}
+
+/* section dropdown in the header */
+.jump{margin-left:auto;display:flex;align-items:center}
+.jump select{appearance:none;-webkit-appearance:none;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:99px;padding:6px 34px 6px 14px;max-width:340px;cursor:pointer;
+  background-image:none}
+.jump{position:relative}
+.jump::after{content:"▾";position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink-3);font-size:12px}
+.jump select:hover,.jump select:focus{border-color:var(--ink-2);outline:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stepcount{margin-left:0}
+nav.side{display:none}
+@media (max-width:860px){.top-in{gap:8px;padding:10px 16px}.jump{min-width:0;flex:1 1 auto;justify-content:flex-end}.jump select{max-width:100%;width:100%;font-size:13px}.brand{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis}.stepcount{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand">cube-semantic-tests<small>an interactive walkthrough</small></div>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+  <div class="stepcount" id="count"></div>
+  <label class="jump"><span class="sr">Jump to section</span><select id="jump" aria-label="Jump to section"></select></label>
+  <button class="iconbtn" id="theme" title="Toggle light/dark">◐</button>
+</div></header>
+
+<div class="layout">
+<nav class="side" aria-label="Steps"><ol id="nav"></ol></nav>
+<main id="main">
+
+<!-- ============================================================ problem -->
+<section class="step" data-title="The Monday morning problem">
+  <div class="hero">
+    <div class="hero-emoji">☕📉</div>
+    <div>
+      <h2>Monday, 9:02 am. The numbers are wrong, and every test is green.</h2>
+      <p class="lead">The overnight dbt run finished without a single failed test. Then the messages start coming in. Click each one to see what went wrong and what would have caught it.</p>
+    </div>
+  </div>
+
+  <div class="incidents" id="incidents"></div>
+
+  <div class="punch">
+    <div class="punch-big">✅ 312 dbt tests passed</div>
+    <p>Every one of these problems sits <b>above</b> the tables. The data in BigQuery was fine. What broke was the layer that turns tables into answers: joins, access rules, measure definitions and cached rollups. dbt can't test that layer, so <b>cube-semantic-tests</b> does.</p>
+  </div>
+
+  <div class="grid3">
+    <div class="card c-blue"><h3 style="margin-top:0">🧪 dbt tests see</h3><p class="muted" style="margin:0">Columns are unique and not null, relationships hold, values are accepted. All inside BigQuery tables.</p></div>
+    <div class="card c-violet"><h3 style="margin-top:0">🔍 This suite sees</h3><p style="margin:0">The views people query, who can see which rows, the SQL Cube generates, the numbers Cube returns, and the rollups in Cube Store.</p></div>
+    <div class="card c-orange"><h3 style="margin-top:0">👥 People see</h3><p class="muted" style="margin:0">Looker, apps and AI agents all query the same Cube views, so one mistake there reaches all of them at once.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ analogy -->
+<section class="step" data-title="The restaurant analogy">
+  <div class="hero">
+    <div class="hero-emoji">🍽️🕵️</div>
+    <div>
+      <h2>Think of it as mystery diners for your data</h2>
+      <p class="lead">Your semantic layer is a restaurant. dbt tests inspect the ingredients when they're delivered. This framework sends <b>mystery diners</b> who order real dishes as real customers and check that what arrives at the table is right. Click a tile to see what each part maps to.</p>
+    </div>
+  </div>
+
+  <div class="analogy">
+    <div class="tiles" id="tiles"></div>
+    <div class="card tile-detail" id="tileDetail"></div>
+  </div>
+
+  <div class="callout">The short version: <b>order as real customers, never with the manager's master key; check the menu and the locks before cooking anything; then taste the food and weigh it against a recipe someone else wrote.</b></div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="step" data-title="How queries flow">
+  <h2>Cube Cloud vs BigQuery: who answers what</h2>
+  <p class="lead">Here is the restaurant for real. The suite talks to four things. Pick a call to trace its path. The key idea: Cube's answers are compared against BigQuery queried <em>directly</em>, bypassing Cube, so the two are independent.</p>
+  <div class="row" style="margin-bottom:10px"><div class="seg" id="flowSeg"></div></div>
+  <div class="card flowwrap" style="padding:10px">
+  <svg class="flow" viewBox="0 0 900 400" role="img" aria-label="Query flow diagram">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z"/></marker></defs>
+    <!-- edges -->
+    <path class="edge" data-e="py-cc" d="M150,90 L240,90" marker-end="url(#ar)"/>
+    <path class="edge" data-e="py-bqr" d="M95,115 L95,300" marker-end="url(#ar)"/>
+    <path class="edge" data-e="py-cp" d="M150,70 C200,20 520,20 600,40" marker-end="url(#ar)"/>
+    <path class="edge" data-e="cc-api" d="M390,90 L470,90" marker-end="url(#ar)"/>
+    <path class="edge" data-e="api-store" d="M690,110 L760,200" marker-end="url(#ar)"/>
+    <path class="edge" data-e="api-bq" d="M600,115 L600,295" marker-end="url(#ar)"/>
+    <path class="edge" data-e="store-bq" d="M800,250 L700,310" marker-end="url(#ar)"/>
+    <path class="edge" data-e="bqr-bq" d="M190,325 L500,325" marker-end="url(#ar)"/>
+    <text class="elabel" data-e="cc-api" x="398" y="80">JWT</text>
+    <text class="elabel" data-e="py-cp" x="330" y="30">Bearer API key</text>
+    <text class="elabel" data-e="api-bq" x="608" y="210">generated SQL</text>
+    <text class="elabel" data-e="api-store" x="735" y="145">rollup hit</text>
+    <text class="elabel" data-e="store-bq" x="760" y="300">refresh builds</text>
+    <text class="elabel" data-e="bqr-bq" x="270" y="315">reference SQL (capped)</text>
+    <!-- nodes -->
+    <g class="node" data-n="py"><rect x="20" y="60" width="130" height="55" rx="9"/><text x="34" y="84">pytest tests</text><text class="sub" x="34" y="102">conftest fixtures</text></g>
+    <g class="node cube" data-n="cc"><rect x="240" y="60" width="150" height="55" rx="9"/><text x="254" y="84">CubeClient</text><text class="sub" x="254" y="102">mint_token · rows_all</text></g>
+    <g class="node cube" data-n="cp"><rect x="600" y="15" width="200" height="45" rx="9"/><text x="614" y="36">Control Plane API</text><text class="sub" x="614" y="52">validate · staging env</text></g>
+    <g class="node cube" data-n="api"><rect x="470" y="70" width="240" height="45" rx="9"/><text x="484" y="91">Cube Cloud REST</text><text class="sub" x="484" y="107">/v1/meta · /v1/sql · /v1/load</text></g>
+    <g class="node store" data-n="store"><rect x="740" y="200" width="140" height="50" rx="9"/><text x="754" y="222">Cube Store</text><text class="sub" x="754" y="239">pre-aggregations</text></g>
+    <g class="node bq" data-n="bq"><rect x="500" y="295" width="200" height="60" rx="9"/><text x="514" y="319">BigQuery</text><text class="sub" x="514" y="337">gold datasets</text></g>
+    <g class="node bq" data-n="bqr"><rect x="20" y="300" width="170" height="50" rx="9"/><text x="34" y="322">BigQueryRunner</text><text class="sub" x="34" y="339">bytes cap · labels</text></g>
+  </svg>
+  </div>
+  <div class="card" id="flowDetail"></div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="step" data-title="CI pipeline">
+  <h2>How it runs in GitHub Actions</h2>
+  <p class="lead"><code>ci/github-actions.yml</code> has two paths. Pull requests get the cheap gate against the branch's staging environment. After the production dbt run, Airflow fires a <code>repository_dispatch</code> and the full suite runs against production.</p>
+  <div class="cilegend">
+    <span><i style="--k:#cfa955"></i>Trigger</span><span><i style="--k:#5c9c94"></i>Setup</span><span><i style="--k:#7f9a45"></i>Static check</span><span><i style="--k:#c97a45"></i>Tests</span><span><i style="--k:#2f5d3a"></i>Results</span>
+  </div>
+  <div class="cilane" style="--lane:#7f9a45">
+    <div class="cilane-head"><h3>🔀 On a pull request</h3><button class="btn sm ciplay" data-lane="ciPr">▶ Play this run</button></div>
+    <div class="pipe cipipe" id="ciPr"></div>
+  </div>
+  <div class="cilane" style="--lane:#c97a45">
+    <div class="cilane-head"><h3>🌅 After the production dbt run</h3><button class="btn sm ciplay" data-lane="ciPost">▶ Play this run</button></div>
+    <div class="pipe cipipe" id="ciPost"></div>
+  </div>
+  <div class="card" id="ciDetail"></div>
+  <p class="hint">Secrets: <code>CUBE_API_SECRET</code>, <code>CUBE_CLOUD_API_KEY</code>. Variables: <code>CUBE_CLOUD_HOST</code>, <code>CUBE_DEPLOYMENT_ID</code>, <code>CUBE_PROD_API_URL</code>, <code>CUBE_STAGING_API_URL_TEMPLATE</code>, <code>BQ_PROJECT</code>, <code>BQ_LOCATION</code>, <code>GCP_WIF_PROVIDER</code>, <code>GCP_SERVICE_ACCOUNT</code>.</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="step" data-title="Layout and tiers">
+  <h2>Folders and test tiers</h2>
+  <p class="lead">Tests are grouped into tiers with pytest markers. Each tier needs more infrastructure and costs more than the one before, so cheap checks run often and expensive ones run once the data has loaded.</p>
+<pre><code>semtest/          client code: Cube REST + Control Plane, BigQuery runner, /meta helpers, comparison
+  cube.py           CubeClient (mints JWTs, /meta, /v1/sql, /v1/load, rows_all) + ControlPlane
+  bq.py             BigQueryRunner (bytes-billed cap, job labels)
+  meta.py           read /meta: views, members, aliasMember, additivity
+  compare.py        match Cube rows to BigQuery rows within tolerance
+  sqlcheck.py       read row-filter predicates out of generated SQL      <span class="pill acc">new</span>
+  freshness.py      rollup freshness at the rollup's own granularity      <span class="pill acc">new</span>
+config/           EDIT THESE: suite.yml, personas.yml, parity_cases.yml, rollup_cases.yml
+tests/contract/   compile, storefront, governance, access   (no BigQuery cost)
+tests/data/       smoke, row values, fan-out, parity, rollups (executes through Cube)
+tests/unit/       the framework's own tests against a fake Cube   <span class="pill acc">new</span>
+scripts/          lint_model.py, wait_for_rollups.py
+ci/               example GitHub Actions workflow</code></pre>
+
+  <h3>Click a tier</h3>
+  <div class="grid2" style="align-items:start">
+    <div class="tiers" id="tiers"></div>
+    <div class="card" id="tierDetail" style="margin:0"></div>
+  </div>
+  <p class="hint">Orange squares show relative BigQuery cost. <code>lint_model.py</code> isn't a pytest tier: it runs first and needs nothing but the model folder.</p>
+  <h3>Five design rules you'll see everywhere</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Rule</th><th>What it means in the code</th></tr>
+    <tr><td><b>No admin fallback</b></td><td>Every Cube call runs as a named persona with a freshly signed, short-lived JWT. <code>CubeClient</code> has no "default token" path.</td></tr>
+    <tr><td><b>Targets come from <code>/meta</code></b></td><td>Fan-out pairs and row-filter targets are discovered from Cube's metadata, so a newly published view is covered without editing a list.</td></tr>
+    <tr><td><b>Config, not code</b></td><td>Views, personas, golden numbers and rollups live in <code>config/*.yml</code>. The tests themselves never need editing for a new view.</td></tr>
+    <tr><td><b>Independent references</b></td><td>Golden numbers from finance come first. Reference SQL should be written by someone other than the measure's author.</td></tr>
+    <tr><td><b>Bounded cost</b></td><td>Short date windows, a pair cap on fan-out, and a bytes-billed cap plus labels on every BigQuery job.</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="step" data-title="Config files">
+  <h2>Everything project-specific lives in config/</h2>
+  <p class="lead"><code>semtest/config.py</code> loads four YAML files and a <code>.env</code>. Pick a file, then click a key on the right to highlight it and see which code reads it.</p>
+  <div class="tabs" id="cfgTabs"></div>
+  <div id="cfgPanes"></div>
+  <div class="callout">The config folder can be moved with <code>SEMTEST_CONFIG_DIR</code> (relative paths resolve from the suite root, and a folder that doesn't exist is an error). This is one of the recent fixes. See step 11.</div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="step" data-title="Personas and tokens">
+  <h2>Every call runs as a persona</h2>
+  <p class="lead">A persona is a test identity. Its <code>claims</code> become the JWT payload, which Cube turns into the security context that <code>context_to_groups</code> and <code>access_policy</code> rules read. <code>CubeClient.mint_token()</code> signs a new HS256 token on every request, with <code>iat</code> and a 15-minute <code>exp</code>.</p>
+
+  <div class="row" style="margin:8px 0 4px"><div class="seg" id="personaSeg"></div></div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h3 style="margin-top:0">Persona</h3>
+      <dl class="kv" id="personaKv"></dl>
+      <h3>Token variant</h3>
+      <div class="seg" id="tokSeg">
+        <button data-v="good" class="on">Valid</button><button data-v="forged">Forged signature</button><button data-v="expired">Expired</button><button data-v="bare">No access claims</button>
+      </div>
+      <p class="hint" id="tokHint" style="margin-top:8px"></p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">The token sent as <code>Authorization</code></h3>
+      <div class="jwt" id="jwtOut"></div>
+      <p class="hint" style="margin-top:6px"><span style="color:var(--bad)">header</span> . <span style="color:var(--cube)">payload</span> . <span style="color:var(--bq)">signature</span>. The signature here uses a demo secret. The suite uses your <code>CUBE_API_SECRET</code>.</p>
+      <pre id="payloadOut" style="margin-bottom:0"></pre>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">What Cube should answer</h3>
+    <div id="authResult"></div>
+  </div>
+
+  <h3>Who should see what</h3>
+  <p>From <code>personas.yml</code>. <code>test_persona_sees_what_it_should</code> reads each persona's own <code>/meta</code> and checks <code>can_see ⊆ visible</code> and <code>cannot_see ∩ visible = ∅</code>. <code>test_storefront_persona_is_a_superset</code> checks no persona sees a view that <code>ci_reader</code> can't.</p>
+  <div class="tablewrap"><table class="vmatrix" id="vmatrix"></table></div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="step" data-title="Contract tests">
+  <h2>Contract tier: cheap structural checks</h2>
+  <p class="lead">Reads <code>/meta</code> and <code>/v1/sql</code> only, so nothing runs in BigQuery. It runs on every PR against the branch's staging environment, after <code>lint_model.py</code>.</p>
+
+  <div class="tabs" id="ctTabs">
+    <button data-t="lint" class="on">Model lint</button><button data-t="compile">Compile</button><button data-t="store">Storefront</button><button data-t="gov">Governance</button><button data-t="rls">Row filter in SQL</button>
+  </div>
+
+  <div class="tabpane on" data-p="lint">
+    <p><code>scripts/lint_model.py</code> renders each model file as Jinja, parses it as YAML <b>with duplicate keys rejected</b> (PyYAML would quietly keep the last one, but Cube refuses the whole model at boot), and checks two model rules. Toggle the mistakes and run it.</p>
+    <div class="grid2">
+      <div>
+        <label class="chk"><input type="checkbox" data-lint="dup"> Duplicate <code>sql</code> key</label>
+        <label class="chk"><input type="checkbox" data-lint="quote"> Quoted Jinja in <code>sql_table</code></label>
+        <label class="chk"><input type="checkbox" data-lint="public"> Cube not <code>public: false</code></label>
+        <label class="chk"><input type="checkbox" data-lint="pk"> No <code>primary_key</code> dimension</label>
+        <button class="btn primary sm" id="lintRun" style="margin-top:8px">Run lint_model.py</button>
+        <div id="lintOut"></div>
+      </div>
+      <pre id="lintYaml" style="margin:0"></pre>
+    </div>
+  </div>
+
+  <div class="tabpane" data-p="compile">
+    <p><code>test_compile.py</code> calls the Control Plane <code>data-model/validate</code> endpoint for <code>CUBE_BRANCH</code> (or production), which compiles the model and returns errors with file names, without touching BigQuery. <code>test_meta_answers</code> then checks <code>/meta</code> returns entries, proving the environment under test is up.</p>
+<pre><code>GET {CUBE_CLOUD_HOST}/build/api/v1/deployments/{id}/data-model/validate?branchName=feature-x
+Authorization: Bearer {CUBE_CLOUD_API_KEY}
+
+→ {"valid": false, "errors": [{"fileName": "model/views/revenue.yml", "message": "..."}]}</code></pre>
+  </div>
+
+  <div class="tabpane" data-p="store">
+    <p><code>test_storefront.py</code> makes publishing a view a reviewed act. Add or remove views from the published set and see what the test says.</p>
+    <div class="row" id="storeChips" style="margin:8px 0"></div>
+    <div id="storeOut"></div>
+    <p class="hint">Also: <code>test_no_private_cube_is_exposed</code> (anything that isn't a view, using <code>/meta</code>'s <code>type</code> or the <code>base_</code> prefix) and <code>test_member_names_are_snake_case</code>.</p>
+  </div>
+
+  <div class="tabpane" data-p="gov">
+    <p><code>test_governance.py</code> runs once per expected view against the live <code>/meta</code>:</p>
+    <div class="tablewrap"><table>
+      <tr><th>Test</th><th>Fails when</th><th>Driven by</th></tr>
+      <tr><td><code>test_view_carries_required_meta</code></td><td>A view's <code>meta</code> lacks owner, steward or data_product</td><td><code>governance.required_view_meta</code></td></tr>
+      <tr><td><code>test_view_and_members_are_documented</code></td><td>The view or any member has no description</td><td><code>undocumented_allowlist</code></td></tr>
+      <tr><td><code>test_non_additive_measures_are_flagged</code></td><td>An avg, ratio, min/max, running total or <b>countDistinct</b> doesn't declare <code>meta.additive: false</code></td><td><code>meta.NON_ADDITIVE_AGG_TYPES</code></td></tr>
+      <tr><td><code>test_pii_is_confined</code></td><td>A dimension tagged <code>pii: true</code> / <code>classification: pii</code>, or matching a name pattern, appears outside <code>pii_allowed_views</code></td><td><code>pii_name_patterns</code>, <code>pii_allowed_views</code></td></tr>
+      <tr><td><code>test_members_are_classified</code></td><td>A member lacks <code>meta.classification</code> (only when switched on)</td><td><code>require_classification</code></td></tr>
+      <tr><td><code>test_fact_view_has_a_time_dimension</code></td><td>A non-catalog view has no time dimension</td><td><code>catalog_views</code></td></tr>
+    </table></div>
+    <h3>Try the PII rule</h3>
+    <div class="row">
+      <label class="f" style="flex:1;min-width:180px">Dimension name<input id="piiName" value="orders.customer_email"></label>
+      <label class="f" style="min-width:150px">View<select id="piiView"><option>orders</option><option>revenue</option><option>customers</option></select></label>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="piiTag"> meta.pii: true</label>
+    </div>
+    <div id="piiOut"></div>
+  </div>
+
+  <div class="tabpane" data-p="rls">
+    <p>For every restricted persona and every view exposing a row-filter dimension (<code>suite.yml › row_filters</code>), the test asks <code>/v1/sql</code> what Cube <em>would</em> run and requires a predicate on that column binding <b>exactly</b> the persona's <code>row_values</code>. It's run again with each segment applied, since a segment is a caller-chosen filter and the row filter must still AND onto it.</p>
+    <p>This uses <code>semtest/sqlcheck.py</code>, ported to JavaScript below. Edit the SQL or params, or load an example.</p>
+    <div class="row" style="margin-bottom:8px" id="rlsEx"></div>
+    <div class="grid2">
+      <div>
+        <label class="f">Generated SQL (<code>sql[0]</code>)<textarea id="rlsSql" rows="6"></textarea></label>
+        <label class="f">Params (<code>sql[1]</code>, JSON array)<input id="rlsParams"></label>
+      </div>
+      <div>
+        <label class="f">Filter column (<code>sql_column</code>)<input id="rlsCol" value="state"></label>
+        <label class="f">Persona's allowed values (comma separated)<input id="rlsAllowed" value="NSW"></label>
+        <div id="rlsOut"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section class="step" data-title="Data tests and fan-out">
+  <h2>Data tier: queries actually run</h2>
+  <p class="lead">These execute through Cube, so BigQuery is billed. Each one is bounded by <code>smoke_date_range</code> to keep cost down.</p>
+  <div class="grid3">
+    <div class="card"><h3 style="margin-top:0">Smoke</h3><p style="margin:0">One batched query per view with every measure. On failure, each measure is retried alone to name the culprit. A measure pointing at a missing column compiles fine and only fails here. Every time dimension is also sliced by month.</p></div>
+    <div class="card"><h3 style="margin-top:0">Row values</h3><p style="margin:0">The contract tier proved the predicate is in the SQL. This proves the rows that come back hold only the persona's allowed values, which also catches a join that reintroduces rows. Uses <code>rows_all</code> so a cut-off list can't hide a leak.</p></div>
+    <div class="card"><h3 style="margin-top:0">Fan-out</h3><p style="margin:0">For each additive measure and each dimension reached through a join (different <code>aliasMember</code> cube), the grand total must equal the sum of the grouped totals. Try it below.</p></div>
+  </div>
+
+  <h3>Fan-out simulator</h3>
+  <p>Measure: <code>orders.total_revenue</code> (a sum, so additive). Pick the dimension to group by.</p>
+  <div class="row" style="margin-bottom:6px">
+    <div class="seg" id="fanSeg"><button data-d="state" class="on">customers.state</button><button data-d="cat">items.category</button></div>
+    <label class="chk"><input type="checkbox" id="fanDup"> customers has a duplicate key (C2 twice)</label>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0"><div class="tablewrap" id="fanJoin"></div></div>
+    <div class="card" style="margin:0">
+      <div class="row" style="justify-content:space-between">
+        <div><div class="hint">Grand total</div><div class="bigsum" id="fanGrand"></div></div>
+        <div><div class="hint">Sum of groups</div><div class="bigsum" id="fanSplit"></div></div>
+      </div>
+      <div class="tablewrap" id="fanGroups" style="margin-top:8px"></div>
+      <div id="fanOut"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 8 -->
+<section class="step" data-title="Parity">
+  <h2>Parity: is the number right?</h2>
+  <p class="lead">Each case in <code>parity_cases.yml</code> sets <b>exactly one</b> reference: a golden <code>expected</code> number with a <code>source</code> (strongest, because the measure's author didn't produce it), or <code>bigquery_sql</code> run directly against BigQuery. A contract-tier check, <code>test_case_is_well_formed</code>, enforces that every case has an owner and a known persona.</p>
+  <div class="grid2">
+    <div class="card" style="margin:0"><h3 style="margin-top:0">Golden number</h3><p>The query must return one row; Cube's value must be within <code>abs_tol</code>/<code>rel_tol</code> of <code>expected</code>.</p><pre style="margin:0">Cube=4,209,999.40 golden=4,210,000.00  abs_tol=1.00  → pass</pre></div>
+    <div class="card" style="margin:0"><h3 style="margin-top:0">BigQuery reference</h3><p><code>compare_rowsets</code> matches rows on <code>keys</code> (Cube member → BQ column), then compares <code>values</code>. It reports rows missing on either side and every value outside tolerance.</p></div>
+  </div>
+  <p>Case types in the example config: a golden month total, by-state-by-month, a trailing-12-month window, prior year (<code>time_shift</code>), and row-level security checked numerically (NSW analyst's total must equal BigQuery's NSW total, not merely be smaller).</p>
+
+  <h3>Try compare_rowsets</h3>
+  <div class="row" style="margin-bottom:8px"><div class="seg" id="parSeg">
+    <button data-s="match" class="on">Everything matches</button><button data-s="tol">Rounding inside tolerance</button><button data-s="tz">Time-zone bug</button><button data-s="miss">Missing group</button>
+  </div></div>
+  <div class="grid2">
+    <div class="card" style="margin:0"><div class="hint">Cube /v1/load rows</div><div class="tablewrap" id="parCube"></div></div>
+    <div class="card" style="margin:0"><div class="hint">BigQuery reference rows</div><div class="tablewrap" id="parBq"></div></div>
+  </div>
+  <div id="parOut"></div>
+  <div class="callout warn" style="margin-top:14px">Time zones: Cube buckets dates in the query's <code>timezone</code> (UTC if omitted). The reference SQL must bucket the same way, e.g. <code>DATE(order_ts, 'Australia/Sydney')</code>, or orders near midnight on the 1st land in the wrong month.</div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section class="step" data-title="Rollups">
+  <h2>Rollups: used, built, correct and fresh</h2>
+  <p class="lead">Routing alone (the rollup named in the generated SQL) doesn't prove the rollup exists or holds the right numbers. Each case in <code>rollup_cases.yml</code> is checked four ways. Run <code>scripts/wait_for_rollups.py</code> first so a rollup that's still building doesn't show up as a failure.</p>
+  <div class="pipe" id="rollPipe"></div>
+  <div class="card" id="rollDetail"></div>
+
+  <h3>Freshness simulator</h3>
+  <p>The rollup <code>revenue_by_state_monthly</code> is built at some granularity and holds data up to some period. Compare the old check with the current one.</p>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="row">
+        <label class="f" style="flex:1">Rollup granularity<select id="frG"><option>day</option><option>week</option><option selected>month</option><option>quarter</option></select></label>
+        <label class="f" style="flex:1">Freshness query granularity<select id="frQ"><option value="auto" selected>auto (case's granularity)</option><option>day</option><option>week</option><option>month</option><option>quarter</option></select></label>
+      </div>
+      <div class="row">
+        <label class="f" style="flex:1">Rollup holds data through<input type="date" id="frR" value="2026-08-31"></label>
+        <label class="f" style="flex:1">BigQuery latest day<input type="date" id="frB" value="2026-10-14"></label>
+      </div>
+      <div class="row">
+        <label class="f" style="flex:1">max_lag_days<input type="number" id="frL" value="1" min="0"></label>
+        <label class="f" style="flex:1">max_refresh_age_hours<input type="number" id="frA" placeholder="unset"></label>
+        <label class="f" style="flex:1">Rollup last built (hours ago)<input type="number" id="frH" value="20" min="0"></label>
+      </div>
+      <div class="row"><span class="hint">Scenarios:</span>
+        <button class="btn sm" data-fr="stale">Stale since August</button>
+        <button class="btn sm" data-fr="fresh">Fresh</button>
+        <button class="btn sm" data-fr="boundary">Month boundary</button>
+        <button class="btn sm" data-fr="within">Stale within month</button>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin:0 0 12px"><div class="minihead bad">Old check</div><div id="frOld"></div></div>
+      <div class="card" style="margin:0"><div class="minihead ok">Current check (semtest/freshness.py)</div><div id="frNew"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section class="step" data-title="Recent fixes">
+  <h2>Four bugs that let broken things pass</h2>
+  <p class="lead">Each was a false pass or a misleading failure. Each fix comes with unit tests in <code>tests/unit/</code> that run against a fake Cube with no network or credentials (<code>pytest -m unit</code>), and CI now runs them before the contract tier.</p>
+  <div class="bugnav" id="bugNav">
+    <button data-b="1" class="on">1 · Rollup granularity</button><button data-b="2">2 · Config loading</button><button data-b="3">3 · Row-limit detection</button><button data-b="4">4 · Row-filter check</button>
+  </div>
+
+  <div class="tabpane on" data-bug="1">
+    <div class="ba">
+      <div class="before"><h4>Before</h4>The freshness test asked for the latest <b>day</b>. A monthly rollup can't answer a daily query, so Cube sent it to BigQuery, and the test compared BigQuery with itself. A rollup stuck in August passed.</div>
+      <div class="after"><h4>After</h4><code>semtest/freshness.py</code> asks at the rollup's granularity, fails unless <code>usedPreAggregations</code> names the rollup, compares <b>periods</b> (the rollup must hold the period containing source latest minus <code>max_lag_days</code>), and optionally checks <code>max_refresh_age_hours</code> to catch staleness within the current month.</div>
+    </div>
+    <p>Try it in the freshness simulator in <a href="#" data-goto="11">step 11</a>. Unit tests: <code>test_rollup_freshness.py</code> (stale rollup now fails, source-served query fails, lag across a month boundary allowed, refresh age without a timestamp fails rather than passes).</p>
+  </div>
+
+  <div class="tabpane" data-bug="2">
+    <div class="ba">
+      <div class="before"><h4>Before</h4>The config folder was read from <code>SEMTEST_CONFIG_DIR</code> once, at import time, <b>before</b> <code>.env</code> was loaded. A value set in <code>.env</code> was silently ignored and the example config ran instead.</div>
+      <div class="after"><h4>After</h4><code>config_dir()</code> loads <code>.env</code> and then resolves the folder on every call. The real environment wins over <code>.env</code>, a relative path resolves from the suite root, and a missing folder raises <code>ConfigError</code> instead of quietly giving an empty config.</div>
+    </div>
+    <h3>Where does the suite read config from?</h3>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <label class="f">SEMTEST_CONFIG_DIR in the real environment<input id="cdEnv" placeholder="(unset)"></label>
+        <label class="f">SEMTEST_CONFIG_DIR in .env<input id="cdDot" value="../my-team-config"></label>
+        <label class="chk"><input type="checkbox" id="cdExists" checked> That folder exists</label>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px"><div class="minihead bad">Old</div><div id="cdOld"></div></div>
+        <div class="card" style="margin:0"><div class="minihead ok">Current</div><div id="cdNew"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabpane" data-bug="3">
+    <div class="ba">
+      <div class="before"><h4>Before</h4>Queries were sent with no <code>limit</code>, so Cube silently applied its default of 10,000 rows. A large result came back cut off and was compared as if complete, showing up as "missing from Cube" parity rows or a fan-out "SHRANK (rows dropped by join)".</div>
+      <div class="after"><h4>After</h4><code>CubeClient.rows_all()</code> sets <code>limit</code> to <code>suite.yml › row_limit</code> (match your <code>CUBEJS_DB_QUERY_LIMIT</code>, 50,000 by default). A result that fills it raises <code>TruncatedResult</code>, which says plainly the result was probably cut off. A query that sets its own <code>limit</code> is treated as a deliberate top-N.</div>
+    </div>
+    <h3>Simulate a query</h3>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <label class="f">Rows the query really has: <b id="rlNv"></b><input type="range" id="rlN" min="100" max="80000" step="100" value="12000"></label>
+        <label class="f">suite.yml › row_limit<input type="number" id="rlL" value="50000"></label>
+        <label class="chk"><input type="checkbox" id="rlTop"> Query sets its own <code>limit: 100</code> (top-N)</label>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px"><div class="minihead bad">Old</div><div id="rlOld"></div></div>
+        <div class="card" style="margin:0"><div class="minihead ok">Current</div><div id="rlNew"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabpane" data-bug="4">
+    <div class="ba">
+      <div class="before"><h4>Before</h4>The row-filter check looked for each allowed value <b>anywhere</b> in the SQL text or params. A value like <code>1</code> matched <code>LIMIT 10000</code>; <code>NSW</code> on the wrong column passed; a filter that also let VIC through passed.</div>
+      <div class="after"><h4>After</h4><code>semtest/sqlcheck.py</code> finds <code>=</code> / <code>IN (…)</code> predicates on the filter <b>column</b> (any quoting, optional table qualifier), resolves <code>?</code>, <code>$n</code> and literal values, and requires exactly the allowed set. An unrecognised shape fails loudly rather than passing.</div>
+    </div>
+    <h3>Old check vs new check on the same SQL</h3>
+    <div class="row" style="margin-bottom:8px" id="b4Ex"></div>
+    <pre id="b4Sql"></pre>
+    <div class="grid2">
+      <div class="card" style="margin:0"><div class="minihead bad">Old: "is the value anywhere?"</div><div id="b4Old"></div></div>
+      <div class="card" style="margin:0"><div class="minihead ok">Current: sqlcheck.row_filter_problem</div><div id="b4New"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section class="step" data-title="Run it yourself">
+  <h2>Running the suite</h2>
+  <p class="lead">Each command needs a bit more set up than the one before it. Click a line to copy it.</p>
+  <div class="card" id="cmds"></div>
+
+  <h3>Adapting it to your model</h3>
+  <ol>
+    <li><b>suite.yml</b>: your public views, <code>private_prefix</code>, required view meta, PII rules, the row-filter dimension, a short <code>smoke_date_range</code>, and <code>row_limit</code>.</li>
+    <li><b>personas.yml</b>: one per access pattern, with claims shaped to what your <code>cube.py</code> and <code>access_policy</code> read.</li>
+    <li><b>parity_cases.yml</b>: start with 3 to 5 golden numbers finance already trusts, then add grouped and time-based cases with independently written SQL.</li>
+    <li><b>rollup_cases.yml</b>: one case per pre-aggregation that matters, with matching BigQuery SQL and a freshness rule.</li>
+  </ol>
+
+  <h3>Check these against your deployment</h3>
+  <p>The suite was exercised against a local fake of Cube's REST API with planted bugs, not a live Cube Cloud deployment.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Assumption</th><th>Why it matters</th></tr>
+    <tr><td>Token claim names</td><td><code>check_auth</code> / <code>context_to_groups</code> must read the claims in personas.yml. With Cube Cloud SSO user attributes, personas need real test users.</td></tr>
+    <tr><td><code>/meta</code> fields</td><td>Entries carry <code>type: view|cube</code>; view members carry <code>aliasMember</code>. Without it, fan-out tests skip.</td></tr>
+    <tr><td>Pre-aggregation fields</td><td><code>/v1/sql</code> returns <code>preAggregations</code> and <code>/v1/load</code> returns <code>usedPreAggregations</code>; names are matched as substrings.</td></tr>
+    <tr><td>Staging URL pattern</td><td>Copy a real branch URL into <code>CUBE_STAGING_API_URL_TEMPLATE</code>.</td></tr>
+    <tr><td>Time zones</td><td>Each Cube query's <code>timezone</code> matches how the reference SQL buckets dates.</td></tr>
+    <tr><td>Cost</td><td>Fan-out is two queries per pair; every reference query is capped by <code>BQ_MAX_BYTES_BILLED</code>.</td></tr>
+  </table></div>
+  <div class="callout">That's the whole framework. Jump back to any step from the list on the left.</div>
+</section>
+
+<div class="pager">
+  <button class="btn" id="prev">← Back</button>
+  <button class="btn primary" id="next">Next →</button>
+</div>
+</main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const res=(kind,html)=>`<div class="result ${kind}">${html}</div>`;
+const fmt=n=>n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ---------------- theme ---------------- */
+let themeOverride=null;
+try{themeOverride=localStorage.getItem("cst-theme")}catch(e){}
+if(themeOverride) document.documentElement.dataset.theme=themeOverride;
+$("#theme").onclick=()=>{
+  const dark=document.documentElement.dataset.theme==="dark";
+  const t=dark?"light":"dark"; document.documentElement.dataset.theme=t;
+  try{localStorage.setItem("cst-theme",t)}catch(e){}
+};
+
+/* ---------------- step navigation ---------------- */
+const steps=$$("section.step"), nav=$("#nav"), seen=new Set();
+const PAL=["#7f9a45","#c97a45","#cfa955","#5c9c94"];
+steps.forEach((s,i)=>{s.style.setProperty("--sc",PAL[i%PAL.length]);s.insertAdjacentHTML("afterbegin",`<div class="eyebrow">Step ${i+1} of ${steps.length}</div>`);document.getElementById("jump").add(new Option(`${i+1}. ${s.dataset.title}`,i));const li=document.createElement("li");li.style.setProperty("--c",PAL[i%PAL.length]);const b=document.createElement("button");b.textContent=s.dataset.title;b.onclick=()=>go(i);li.appendChild(b);nav.appendChild(li);});
+const navBtns=$$("button",nav);
+let cur=0;
+function go(i,noScroll){
+  i=Math.max(0,Math.min(steps.length-1,i));
+  seen.add(cur); cur=i;
+  steps.forEach((s,j)=>s.classList.toggle("on",j===i));
+  navBtns.forEach((b,j)=>{b.classList.toggle("on",j===i);b.classList.toggle("seen",seen.has(j)&&j!==i)});
+  $("#jump").value=String(i);
+  $("#bar").style.width=((i+1)/steps.length*100)+"%";
+  $("#count").textContent=`${i+1} / ${steps.length}`;
+  $("#prev").disabled=i===0; $("#next").disabled=i===steps.length-1;
+  $("#next").textContent=i===steps.length-1?"Done":"Next →";
+  if(history.replaceState) history.replaceState(null,"","#step-"+(i+1));
+  if(!noScroll) window.scrollTo({top:0,behavior:"smooth"});
+  navBtns[i].scrollIntoView({block:"nearest",inline:"nearest"});
+}
+$("#jump").onchange=e=>{go(+e.target.value);e.target.blur()};$("#prev").onclick=()=>go(cur-1); $("#next").onclick=()=>go(cur+1);
+document.addEventListener("keydown",e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if(e.key==="ArrowRight") go(cur+1); if(e.key==="ArrowLeft") go(cur-1);
+});
+document.addEventListener("click",e=>{const a=e.target.closest("[data-goto]");if(a){e.preventDefault();go(+a.dataset.goto-1)}});
+const m0=location.hash.match(/step-(\d+)/); go(m0?+m0[1]-1:0,true);
+
+/* generic segmented control helper */
+function seg(el,cb){ $$("button",el).forEach(b=>b.addEventListener("click",()=>{ $$("button",el).forEach(x=>x.classList.toggle("on",x===b)); cb(b); })); }
+
+/* ---------------- opening: incidents ---------------- */
+const INC=[
+ {e:"💰",c:"#c97a45",who:"CFO",msg:"The revenue tile says October was $4.6M. Finance closed the month at $4.21M. Which one do I give the board?",why:"A new join from orders to order items repeated each order once per product category, so some revenue was counted twice. Every table was correct. The join in the semantic layer wasn't.",caught:[["Fan-out test",9],["Parity golden number",10]]},
+ {e:"🔓",c:"#c97a45",who:"Head of Sales",msg:"Why does the NSW analyst's export include Victorian customers?",why:"A new view was published without the state row filter in its access policy, so analysts restricted to NSW could see every state.",caught:[["Row filter in generated SQL",8],["Row values check",9]]},
+ {e:"🐢",c:"#cfa955",who:"Operations",msg:"The dashboard still says September is the latest month. October loaded on Friday.",why:"The monthly rollup stopped refreshing. Cube kept serving it, so the dashboard looked healthy but showed old numbers.",caught:[["Rollup freshness",11]]},
+ {e:"🤖",c:"#7f9a45",who:"AI assistant",msg:"Average order value across all states: $1,240. (No single state is above $300.)",why:"The assistant added up per-state averages. Nothing in the model said that measure can't be summed.",caught:[["Non-additive flag (governance)",8]]},
+ {e:"🙈",c:"#5c9c94",who:"Privacy team",msg:"Customer email addresses are showing up in the revenue view.",why:"A join pulled a PII column into a public view that analysts use.",caught:[["PII confinement (governance)",8]]},
+ {e:"💥",c:"#5c9c94",who:"Analyst",msg:"Revenue by product returns an error. It worked last week.",why:"A measure points at a column that was renamed. The model still compiles, so the error only shows up when someone runs the query.",caught:[["Smoke test",9]]}
+];
+$("#incidents").innerHTML=INC.map((x,i)=>`<div class="incident" style="--ic:${x.c}"><div class="inc-top"><span class="inc-emoji">${x.e}</span><div><div class="inc-who">${x.who}</div><div class="inc-msg">“${esc(x.msg)}”</div></div></div><button class="inc-btn" data-i="${i}">What went wrong? ▾</button><div class="inc-why" hidden><p>${esc(x.why)}</p><div class="inc-caught">Caught by: ${x.caught.map(c=>`<a href="#" class="pill acc" data-goto="${c[1]}">${esc(c[0])} → step ${c[1]}</a>`).join("")}</div></div></div>`).join("");
+$$(".inc-btn").forEach(b=>b.onclick=()=>{const w=b.nextElementSibling;w.hidden=!w.hidden;b.textContent=w.hidden?"What went wrong? ▾":"Hide ▴";b.parentNode.classList.toggle("open",!w.hidden)});
+
+/* ---------------- opening: analogy ---------------- */
+const TILES=[
+ {e:"🥕",t:"The pantry",c:"#5c9c94",a:"Ingredients arrive and are inspected at the back door: right quantities, nothing spoiled.",f:"<b>BigQuery gold tables, checked by dbt tests.</b> Not this framework's job. It trusts dbt for the ingredients and tests what's made from them.",s:null},
+ {e:"📜",t:"The menu",c:"#7f9a45",a:"The menu lists exactly the dishes the chef approved. Kitchen-only prep items never appear on it.",f:"<b>Cube views, the public storefront.</b> The storefront test checks the published views are exactly <code>expected_views</code> and that no private <code>base_</code> cube leaks out.",s:8},
+ {e:"🕵️",t:"Mystery diners",c:"#c97a45",a:"Each diner carries a membership card: a VIP, a regional member, someone with no tier at all. Nobody borrows the manager's master key.",f:"<b>Personas.</b> Every request carries a freshly signed JWT holding that persona's claims. There's no admin fallback, so what a test sees is what that kind of user really sees.",s:7},
+ {e:"🔐",t:"Checking the locks",c:"#c97a45",a:"Before any food is cooked: fake and expired cards get turned away, and staff-only rooms stay locked for guests.",f:"<b>Contract tier.</b> Forged, expired and empty tokens are refused, each persona sees only its views, and the row filter is in the SQL Cube generates. Nothing runs in BigQuery, so it's free.",s:8},
+ {e:"🍲",t:"Tasting every dish",c:"#5c9c94",a:"Order one of everything. Does each dish actually come out of the kitchen?",f:"<b>Smoke tests.</b> Every measure and time dimension runs. A measure pointing at a missing column compiles fine but fails here.",s:9},
+ {e:"🧾",t:"The double-charged bill",c:"#cfa955",a:"The side dish came with two mains, and it got charged twice.",f:"<b>Fan-out test.</b> Grand total versus sum of groups for every additive measure and joined dimension. If grouping makes the total grow, a join is duplicating rows.",s:9},
+ {e:"⚖️",t:"Weighing the dish",c:"#c97a45",a:"Weigh the plate against a recipe card written by someone else, or a certified weight from the auditor.",f:"<b>Parity.</b> Cube's number must match a golden number from finance or reference SQL run straight against BigQuery, ideally written by someone who isn't the measure's author.",s:10},
+ {e:"🔥",t:"The heat lamp",c:"#cfa955",a:"Some dishes are pre-cooked and kept warm. Is the right dish under the lamp, is it really there, does it taste like fresh, and was it made today?",f:"<b>Rollups (pre-aggregations).</b> Four checks: routing, materialised and served, values match BigQuery, and fresh.",s:11},
+ {e:"📋",t:"The inspection schedule",c:"#7f9a45",a:"A quick inspection before a new menu goes live, and a full tasting after every morning delivery.",f:"<b>CI.</b> Pull requests run lint, unit and contract tests against the branch. After the production dbt run, the full suite runs against production.",s:4}
+];
+$("#tiles").innerHTML=TILES.map((t,i)=>`<button class="tile" style="--tc:${t.c}" data-i="${i}"><span class="tile-e">${t.e}</span><span>${t.t}</span></button>`).join("");
+function showTile(i){const t=TILES[i];$$("#tiles .tile").forEach((b,j)=>b.classList.toggle("on",j===i));
+  const d=$("#tileDetail");d.style.setProperty("--sc",t.c);
+  d.innerHTML=`<div class="tile-big">${t.e}</div><h3 style="margin-top:4px">${t.t}</h3><div class="an-row"><div class="an-label">In the restaurant</div><p>${t.a}</p></div><div class="an-row"><div class="an-label" style="background:${t.c}">In the framework</div><p>${t.f}</p></div>${t.s?`<button class="btn primary sm" data-goto="${t.s}">See it in step ${t.s} →</button>`:""}`;}
+$$("#tiles .tile").forEach(b=>b.onclick=()=>showTile(+b.dataset.i));showTile(2);
+
+/* ---------------- step 2: tiers ---------------- */
+const TIERS=[
+ {m:"unit",cost:0,needs:"Nothing",checks:"The framework itself, against a fake Cube: config loading, row-limit detection, row-filter SQL parsing, rollup freshness logic.",when:"Every change to semtest/ or tests/",files:"tests/unit/*"},
+ {m:"contract",cost:0,needs:"Cube",checks:"Model compiles (Control Plane). Public views are exactly the expected list and no cube leaks. Descriptions, owner/steward meta, PII confinement, non-additive flags. Missing, forged and expired tokens are refused. Each persona sees exactly its views. The row filter is in the generated SQL, including with a segment applied.",when:"Every PR, against the branch's staging environment",files:"tests/contract/*, plus test_case_is_well_formed in test_parity.py"},
+ {m:"data",cost:2,needs:"Cube + BigQuery (via Cube)",checks:"Every measure and time dimension runs. Restricted personas get back only their allowed values. Joined dimensions don't inflate additive totals.",when:"PR on sandbox data, or after the production load",files:"test_smoke.py, test_access_values.py, test_fanout.py"},
+ {m:"parity",cost:3,needs:"Cube + BigQuery (direct)",checks:"Golden numbers and BigQuery reference SQL, including row-level security checked numerically.",when:"After the production dbt run",files:"test_parity.py + config/parity_cases.yml"},
+ {m:"rollup",cost:3,needs:"Cube + BigQuery + built rollups",checks:"Rollup routing, that it was built and served, its values against BigQuery, and its freshness.",when:"After the dbt run and the rollup refresh",files:"test_rollups.py + config/rollup_cases.yml"}
+];
+const tiersEl=$("#tiers");
+TIERS.forEach((t,i)=>{const b=document.createElement("button");b.className="tier";
+  b.innerHTML=`<b>${t.m}</b><span>${esc(t.needs)}</span><span class="cost">${[0,1,2].map(k=>`<i class="${k<t.cost?'f':''}"></i>`).join("")}</span>`;
+  b.onclick=()=>showTier(i); tiersEl.appendChild(b);});
+function showTier(i){const t=TIERS[i];$$(".tier",tiersEl).forEach((b,j)=>b.classList.toggle("on",j===i));
+  $("#tierDetail").innerHTML=`<h3 style="margin-top:0"><code>pytest -m ${t.m}</code></h3><dl class="kv"><dt>Needs</dt><dd>${esc(t.needs)}</dd><dt>Checks</dt><dd>${esc(t.checks)}</dd><dt>When</dt><dd>${esc(t.when)}</dd><dt>Files</dt><dd><code>${esc(t.files)}</code></dd></dl>`;}
+showTier(1);
+
+/* ---------------- step 3: config ---------------- */
+const CFG={
+"suite.yml":{text:
+`<span class="yc"># Main suite configuration. Edit this file, not the tests.</span>
+<k data-k="private_prefix"><span class="yk">private_prefix</span>: base_</k>
+<k data-k="storefront_persona"><span class="yk">storefront_persona</span>: ci_reader</k>
+<k data-k="default_persona"><span class="yk">default_persona</span>: ci_reader</k>
+
+<k data-k="expected_views"><span class="yk">expected_views</span>:
+  - orders
+  - customers
+  - revenue</k>
+<k data-k="catalog_views"><span class="yk">catalog_views</span>:
+  - customers</k>
+
+<k data-k="governance"><span class="yk">governance</span>:
+  <span class="yk">required_view_meta</span>: [owner, steward, data_product]
+  <span class="yk">undocumented_allowlist</span>: []
+  <span class="yk">pii_name_patterns</span>: [<span class="ys">'(^|_)email$'</span>, <span class="ys">'(^|_)phone'</span>, ...]
+  <span class="yk">pii_allowed_views</span>: [customers]
+  <span class="yk">require_classification</span>: false</k>
+
+<k data-k="row_filters"><span class="yk">row_filters</span>:
+  - <span class="yk">dimension</span>: state
+    <span class="yc"># sql_column: state</span>
+    <span class="yk">exempt_views</span>: []</k>
+
+<k data-k="smoke_date_range"><span class="yk">smoke_date_range</span>: [2026-10-01, 2026-10-07]</k>
+<k data-k="row_limit"><span class="yk">row_limit</span>: 50000</k>
+
+<k data-k="fanout"><span class="yk">fanout</span>:
+  <span class="yk">max_pairs_per_view</span>: 6
+  <span class="yk">allowlist</span>:
+    <span class="yc"># - view: orders
+    #   measure: orders.total_revenue
+    #   dimension: orders.product_category
+    #   reason: an order spans several categories</span></k>
+
+<k data-k="tolerance"><span class="yk">tolerance</span>:
+  <span class="yk">abs</span>: 0.01       <span class="yc"># one cent</span>
+  <span class="yk">rel</span>: 0.000001</k>`,
+keys:[
+ ["private_prefix","How to spot a private cube if /meta has no type field","meta.is_view()"],
+ ["storefront_persona","Whose /meta counts as the whole storefront","conftest.storefront_meta"],
+ ["default_persona","Runs queries where access isn't under test","test_smoke, test_fanout"],
+ ["expected_views","The exact public views. A new view fails until it's added here","test_storefront + parametrises most tests"],
+ ["catalog_views","Views exempt from needing a time dimension","test_fact_view_has_a_time_dimension"],
+ ["governance","Required meta, documentation, PII and classification rules","test_governance.py"],
+ ["row_filters","The dimension access policies filter on","test_access (SQL) + test_access_values (rows)"],
+ ["smoke_date_range","Short window that caps BigQuery cost","test_smoke, test_fanout"],
+ ["row_limit","Rows requested; filling it means truncated","CubeClient.rows_all()"],
+ ["fanout","Pair cap and justified exceptions","test_fanout.py"],
+ ["tolerance","Default abs/rel tolerance for number comparison","conftest.tol → parity, rollups, fan-out"]]},
+"personas.yml":{text:
+`<span class="yk">personas</span>:
+<k data-k="ci_reader">  <span class="yk">ci_reader</span>:
+    <span class="yk">description</span>: Non-admin, all-access identity used by CI.
+    <span class="yk">claims</span>: {sub: ci-reader, groups: [exec]}
+    <span class="yk">can_see</span>: [orders, customers, revenue]</k>
+
+<k data-k="analyst_nsw">  <span class="yk">analyst_nsw</span>:
+    <span class="yk">description</span>: Sales analyst restricted to NSW rows, no PII.
+    <span class="yk">claims</span>: {sub: test-analyst-nsw, groups: [analyst], state: NSW}
+    <span class="yk">can_see</span>: [orders, revenue]
+    <span class="yk">cannot_see</span>: [customers]
+    <span class="yk">row_values</span>:
+      <span class="yk">state</span>: [NSW]</k>
+
+<k data-k="analyst_vic">  <span class="yk">analyst_vic</span>:
+    <span class="yk">claims</span>: {sub: test-analyst-vic, groups: [analyst], state: VIC}
+    <span class="yk">can_see</span>: [orders, revenue]
+    <span class="yk">cannot_see</span>: [customers]
+    <span class="yk">row_values</span>:
+      <span class="yk">state</span>: [VIC]</k>
+
+<k data-k="no_groups">  <span class="yk">no_groups</span>:
+    <span class="yk">description</span>: Authenticated but holds no group. Must see nothing.
+    <span class="yk">claims</span>: {sub: test-nobody}
+    <span class="yk">cannot_see</span>: [orders, customers, revenue]</k>`,
+keys:[
+ ["ci_reader","All-access, but not admin. The storefront and default persona","Most tests"],
+ ["analyst_nsw","Restricted by group and by state row filter","test_access, test_access_values, parity RLS case"],
+ ["analyst_vic","Same shape, other state: proves filters aren't hard-coded","test_access, test_access_values"],
+ ["no_groups","Valid token, no group: must see nothing","test_persona_sees_what_it_should"]]},
+"parity_cases.yml":{text:
+`<span class="yk">cases</span>:
+<k data-k="golden">  - <span class="yk">id</span>: revenue_oct_2026_matches_finance_close
+    <span class="yk">persona</span>: ci_reader
+    <span class="yk">owner</span>: finance-data@yourco.example
+    <span class="yk">source</span>: Finance month-end close pack, October 2026
+    <span class="yk">cube_query</span>:
+      <span class="yk">measures</span>: [revenue.net_revenue]
+      <span class="yk">timeDimensions</span>:
+        - {dimension: revenue.order_date, dateRange: [2026-10-01, 2026-10-31]}
+      <span class="yk">timezone</span>: Australia/Sydney
+    <span class="yk">expected</span>: 4210000.00
+    <span class="yk">abs_tol</span>: 1.00</k>
+
+<k data-k="sql">  - <span class="yk">id</span>: revenue_by_state_by_month_q3_2026
+    <span class="yk">persona</span>: ci_reader
+    <span class="yk">owner</span>: sales-analytics@yourco.example
+    <span class="yk">cube_query</span>: {measures: [...], dimensions: [revenue.state], ... granularity: month}
+    <span class="yk">bigquery_sql</span>: |
+      SELECT state,
+             DATE_TRUNC(DATE(order_ts, 'Australia/Sydney'), MONTH) AS order_month,
+             SUM(net_amount) AS net_revenue, COUNT(*) AS order_count
+      FROM \`your-project.gold.fct_orders\` WHERE ... GROUP BY 1, 2</k>
+<k data-k="keys">    <span class="yk">keys</span>:
+      revenue.state: state
+      revenue.order_date.month: order_month</k>
+<k data-k="values">    <span class="yk">values</span>:
+      revenue.net_revenue: net_revenue
+      revenue.order_count: order_count</k>
+
+<span class="yc">  # also: trailing 12 months, prior year (time_shift),
+  #       nsw_analyst_sees_exactly_nsw_revenue (persona: analyst_nsw)</span>`,
+keys:[
+ ["golden","Golden number: needs source + owner. The strongest check","test_cube_matches_reference"],
+ ["sql","BigQuery reference SQL, ideally written by someone else","BigQueryRunner.query()"],
+ ["keys","Cube member → BQ column, for grouping columns","compare_rowsets()"],
+ ["values","Cube measure → BQ column, compared within tolerance","compare_rowsets()"]]},
+"rollup_cases.yml":{text:
+`<span class="yk">cases</span>:
+  - <span class="yk">id</span>: revenue_monthly_by_state
+    <span class="yk">persona</span>: ci_reader
+<k data-k="pre_aggregation">    <span class="yk">pre_aggregation</span>: revenue_by_state_monthly   <span class="yc"># substring of the rollup's name</span></k>
+<k data-k="cube_query">    <span class="yk">cube_query</span>:
+      <span class="yk">measures</span>: [revenue.net_revenue, revenue.order_count]
+      <span class="yk">dimensions</span>: [revenue.state]
+      <span class="yk">timeDimensions</span>:
+        - {dimension: revenue.order_date, granularity: month,
+           dateRange: [2026-07-01, 2026-09-30]}
+      <span class="yk">timezone</span>: Australia/Sydney</k>
+<k data-k="bigquery_sql">    <span class="yk">bigquery_sql</span>: |  ...same shape as parity...
+    <span class="yk">keys</span>: {...}
+    <span class="yk">values</span>: {...}</k>
+<k data-k="freshness">    <span class="yk">freshness</span>:
+      <span class="yk">time_dimension</span>: revenue.order_date
+      <span class="yk">bigquery_max_sql</span>: |
+        SELECT MAX(DATE(order_ts, 'Australia/Sydney')) FROM ...
+      <span class="yk">max_lag_days</span>: 1
+      <span class="yc"># granularity: month          # default: the case query's</span>
+      <span class="yc"># max_refresh_age_hours: 26   # catch staleness within the month</span></k>`,
+keys:[
+ ["pre_aggregation","Matched as a substring in /v1/sql and usedPreAggregations","routing, materialised, freshness, wait_for_rollups"],
+ ["cube_query","A query that should hit the rollup","all four rollup checks"],
+ ["bigquery_sql","Reference rows for the values check","test_rollup_values_match_bigquery"],
+ ["freshness","Rule for the freshness check (see step 9)","semtest/freshness.py"]]},
+".env":{text:
+`<k data-k="dir"><span class="yc"># Unset = ./config. Relative = from the suite root. Missing = error.</span>
+<span class="yk">SEMTEST_CONFIG_DIR</span>=../my-team-config</k>
+
+<k data-k="cube"><span class="yk">CUBE_API_URL</span>=https://your-deployment...cubecloudapp.dev/cubejs-api
+<span class="yk">CUBE_API_SECRET</span>=          <span class="yc"># signs persona tokens only</span>
+<span class="yk">CUBE_QUERY_TIMEOUT</span>=300</k>
+
+<k data-k="cp"><span class="yk">CUBE_CLOUD_HOST</span>=https://your-tenant.cubecloud.dev
+<span class="yk">CUBE_CLOUD_API_KEY</span>=
+<span class="yk">CUBE_DEPLOYMENT_ID</span>=
+<span class="yk">CUBE_BRANCH</span>=              <span class="yc"># unset = production branch</span></k>
+
+<k data-k="bq"><span class="yk">BQ_PROJECT</span>=your-project
+<span class="yk">BQ_LOCATION</span>=australia-southeast1
+<span class="yk">BQ_MAX_BYTES_BILLED</span>=5368709120   <span class="yc"># 5 GiB per query</span></k>`,
+keys:[
+ ["dir","Where the YAML files live","config.config_dir()"],
+ ["cube","The environment under test and the signing secret","conftest.cube → CubeClient"],
+ ["cp","Optional: compile check and staging environment","conftest.control_plane"],
+ ["bq","Reference queries, with a hard cost cap","conftest.bq → BigQueryRunner"]]}
+};
+const cfgTabs=$("#cfgTabs"), cfgPanes=$("#cfgPanes");
+Object.entries(CFG).forEach(([name,c],i)=>{
+  const b=document.createElement("button");b.textContent=name;b.dataset.t=name;if(!i)b.classList.add("on");cfgTabs.appendChild(b);
+  const p=document.createElement("div");p.className="tabpane"+(i?"":" on");p.dataset.p=name;
+  p.innerHTML=`<div class="annot"><pre><code>${c.text}</code></pre><div class="keylist">${c.keys.map(k=>`<button data-k="${k[0]}"><code>${esc(k[0])}</code><span>${esc(k[1])}</span><span>Read by: <code>${esc(k[2])}</code></span></button>`).join("")}</div></div>`;
+  cfgPanes.appendChild(p);
+  $$(".keylist button",p).forEach(kb=>kb.onclick=()=>{
+    $$(".keylist button",p).forEach(x=>x.classList.toggle("on",x===kb));
+    $$("k",p).forEach(k=>k.classList.toggle("hl",k.dataset.k===kb.dataset.k));
+    const t=$(`k[data-k="${kb.dataset.k}"]`,p); if(t) t.scrollIntoView({block:"nearest"});
+  });
+});
+seg(cfgTabs,b=>$$(".tabpane",cfgPanes).forEach(p=>p.classList.toggle("on",p.dataset.p===b.dataset.t)));
+
+/* ---------------- step 4: personas & JWT ---------------- */
+const PERSONAS={
+ ci_reader:{claims:{sub:"ci-reader",groups:["exec"]},can:["orders","customers","revenue"],cannot:[],rows:null,desc:"Non-admin, all-access identity used by CI."},
+ analyst_nsw:{claims:{sub:"test-analyst-nsw",groups:["analyst"],state:"NSW"},can:["orders","revenue"],cannot:["customers"],rows:{state:["NSW"]},desc:"Sales analyst restricted to NSW rows, no PII."},
+ analyst_vic:{claims:{sub:"test-analyst-vic",groups:["analyst"],state:"VIC"},can:["orders","revenue"],cannot:["customers"],rows:{state:["VIC"]},desc:"Sales analyst restricted to VIC rows, no PII."},
+ no_groups:{claims:{sub:"test-nobody"},can:[],cannot:["orders","customers","revenue"],rows:null,desc:"Authenticated but holds no group. Must see nothing."}
+};
+let persona="ci_reader", tokVariant="good";
+const pSeg=$("#personaSeg");
+Object.keys(PERSONAS).forEach((n,i)=>{const b=document.createElement("button");b.textContent=n;b.dataset.p=n;if(!i)b.classList.add("on");pSeg.appendChild(b);});
+seg(pSeg,b=>{persona=b.dataset.p;renderPersona()});
+seg($("#tokSeg"),b=>{tokVariant=b.dataset.v;renderPersona()});
+const b64u=str=>btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64uBytes=buf=>{let s="";new Uint8Array(buf).forEach(c=>s+=String.fromCharCode(c));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")};
+async function hmac(secret,msg){
+  try{ if(!(window.crypto&&crypto.subtle)) throw 0;
+    const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+    return b64uBytes(await crypto.subtle.sign("HMAC",k,new TextEncoder().encode(msg)));
+  }catch(e){ return "‹HMAC-SHA256 of header.payload›"; }
+}
+let jwtSeq=0;
+async function renderPersona(){
+  const p=PERSONAS[persona], now=Math.floor(Date.now()/1000), seq=++jwtSeq;
+  $("#personaKv").innerHTML=`<dt>Description</dt><dd>${esc(p.desc)}</dd><dt>can_see</dt><dd>${p.can.map(v=>`<span class="pill ok">${v}</span>`).join("")||"<span class='muted'>none</span>"}</dd><dt>cannot_see</dt><dd>${p.cannot.map(v=>`<span class="pill bad">${v}</span>`).join("")||"<span class='muted'>none</span>"}</dd><dt>row_values</dt><dd>${p.rows?Object.entries(p.rows).map(([k,v])=>`<code>${k}</code> ∈ ${v.map(x=>`<span class="pill warn">${x}</span>`).join("")}`).join(""):"<span class='muted'>unrestricted</span>"}</dd>`;
+  const claims= tokVariant==="bare"?{sub:"test-no-claims"}:p.claims;
+  const payload={iat:now,exp:tokVariant==="expired"?now-60:now+900,...claims};
+  const h=b64u(JSON.stringify({alg:"HS256",typ:"JWT"})), b=b64u(JSON.stringify(payload));
+  const sig=await hmac(tokVariant==="forged"?"not-the-real-secret":"demo-secret",h+"."+b);
+  if(seq!==jwtSeq) return;
+  $("#jwtOut").innerHTML=`<span class="h">${h}</span>.<span class="p">${b}</span>.<span class="s">${sig}</span>`;
+  $("#payloadOut").textContent="payload = "+JSON.stringify(payload,null,2)+(tokVariant==="expired"?"   // exp is 60s in the past":"");
+  const hints={good:"CubeClient.mint_token(claims): signed with CUBE_API_SECRET, expires in 15 minutes.",
+    forged:"test_bad_signature_is_rejected: same claims, signed with secret='not-the-real-secret'.",
+    expired:"test_expired_token_is_rejected: mint_token(claims, expired=True) sets exp to one minute ago.",
+    bare:"test_token_with_no_access_claims_sees_nothing: a validly signed token holding only a sub."};
+  $("#tokHint").textContent=hints[tokVariant];
+  let out;
+  if(tokVariant==="good"){
+    out = p.can.length ? res("ok",`HTTP 200. <code>/meta</code> lists ${p.can.map(v=>`<b>${v}</b>`).join(", ")}${p.rows?`, and every query on a view with <code>state</code> is filtered to ${p.rows.state.join(", ")}`:""}.`)
+      : res("ok",`HTTP 200 with an <b>empty storefront</b>. A valid identity with no groups must see no views.`);
+  } else {
+    out = res("ok",`<b>Expected:</b> HTTP 401/403, or 200 with no views. <code>_assert_rejected_or_empty</code> accepts either.`)+
+      res("bad",`<b>Test fails if</b> Cube answers 200 and lists any view: authentication is failing open.`);
+  }
+  $("#authResult").innerHTML=out;
+}
+renderPersona();
+(function(){const V=["orders","customers","revenue"];let h="<tr><th>Persona</th>"+V.map(v=>`<th style="text-align:center">${v}</th>`).join("")+"<th>Row filter</th></tr>";
+ Object.entries(PERSONAS).forEach(([n,p])=>{h+=`<tr><td><code>${n}</code></td>`+V.map(v=>`<td class="c">${p.can.includes(v)?'<span style="color:var(--ok)">✓</span>':p.cannot.includes(v)?'<span style="color:var(--bad)">✗</span>':'–'}</td>`).join("")+`<td>${p.rows?"state = "+p.rows.state:"<span class='muted'>none</span>"}</td></tr>`});
+ $("#vmatrix").innerHTML=h;})();
+
+/* ---------------- step 5: flow ---------------- */
+const FLOWS={
+ meta:{label:"/v1/meta",e:["py-cc","cc-api"],n:["py","cc","api"],cost:"Free",html:`<p><b>GET /v1/meta</b> as a persona. Cube returns only what that persona may see, so the answer itself is the visibility test. Cached per persona for the session by the <code>meta_for</code> fixture.</p><p>Used by: storefront, governance, access visibility, and to <b>discover</b> fan-out pairs and row-filter targets.</p>`},
+ sql:{label:"/v1/sql",e:["py-cc","cc-api"],n:["py","cc","api"],cost:"Free",html:`<p><b>GET /v1/sql</b> returns the SQL Cube <em>would</em> run, its params, and any <code>preAggregations</code> it matched, without running anything.</p><p>Used by: the row-filter check (read the predicate on <code>state</code>) and rollup routing.</p>`},
+ loadbq:{label:"/v1/load → BigQuery",e:["py-cc","cc-api","api-bq"],n:["py","cc","api","bq"],cost:"Billed",html:`<p><b>POST /v1/load</b> with no matching rollup: Cube generates SQL, runs it in BigQuery, and returns rows. The client retries Cube's <code>"Continue wait"</code> until <code>CUBE_QUERY_TIMEOUT</code> and sends <code>cache: must-revalidate</code> so a stale cached answer can't hide a new failure.</p><p>Used by: smoke, row values, fan-out, parity. Comparisons go through <code>rows_all()</code>, which sets an explicit row limit.</p>`},
+ loadstore:{label:"/v1/load → rollup",e:["py-cc","cc-api","api-store"],n:["py","cc","api","store"],cost:"Cheap",html:`<p><b>POST /v1/load</b> for a query a pre-aggregation can answer: Cube serves it from Cube Store and lists the rollup in <code>usedPreAggregations</code>, with <code>lastUpdatedAt</code>.</p><p>Used by: rollup materialised, values, freshness, and <code>wait_for_rollups.py</code>.</p>`},
+ ref:{label:"Reference SQL",e:["py-bqr","bqr-bq"],n:["py","bqr","bq"],cost:"Billed, capped",html:`<p><b>BigQueryRunner</b> runs the case's <code>bigquery_sql</code> straight against the gold tables, bypassing Cube entirely, so it's an independent answer to compare with. Every job has <code>maximum_bytes_billed</code> (5 GiB default) and labels <code>app=cube-semantic-tests, run=&lt;CI run id&gt;</code> for cost attribution.</p><p>Used by: parity (<code>bigquery_sql</code> cases), rollup values, rollup freshness (<code>bigquery_max_sql</code>).</p>`},
+ refresh:{label:"Rollup refresh",e:["store-bq"],n:["store","bq"],cost:"Outside the suite",html:`<p>Cube Cloud rebuilds pre-aggregations from BigQuery on its refresh schedule. The suite doesn't trigger this. It <b>waits</b> for it (<code>wait_for_rollups.py</code>) and then checks the result is fresh.</p>`},
+ cp:{label:"Control Plane",e:["py-cp"],n:["py","cp"],cost:"Free",html:`<p><b>ControlPlane</b> uses a Cube Cloud API key (not a persona token). <code>validate(branch)</code> compiles the model; CI also calls the staging-environment endpoint so the PR branch stays queryable.</p>`}
+};
+const fSeg=$("#flowSeg");
+Object.entries(FLOWS).forEach(([k,f],i)=>{const b=document.createElement("button");b.textContent=f.label;b.dataset.f=k;if(!i)b.classList.add("on");fSeg.appendChild(b);});
+function showFlow(k){const f=FLOWS[k];
+  $$("svg.flow [data-e]").forEach(el=>el.classList.toggle("lit",f.e.includes(el.dataset.e)));
+  $$("svg.flow .node").forEach(el=>el.classList.toggle("lit",f.n.includes(el.dataset.n)));
+  const kind=/Free|Cheap/.test(f.cost)?"ok":/capped/.test(f.cost)?"warn":/Outside/.test(f.cost)?"acc":"bad";
+  $("#flowDetail").innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(f.label)}</h3><span class="pill ${kind}">BigQuery cost: ${f.cost}</span></div>${f.html}`;}
+seg(fSeg,b=>showFlow(b.dataset.f)); showFlow("meta");
+
+/* ---------------- step 6: contract ---------------- */
+seg($("#ctTabs"),b=>$$("#ctTabs ~ .tabpane").forEach(p=>p.classList.toggle("on",p.dataset.p===b.dataset.t)));
+function lintYaml(){const o={};$$("[data-lint]").forEach(c=>o[c.dataset.lint]=c.checked);
+  const L=[];L.push("cubes:");L.push("  - name: base_orders");
+  L.push(o.quote?`    sql_table: <span class="hl">"{{ gold('fct_orders') }}"</span>`:`    sql_table: {{ gold('fct_orders') }}`);
+  if(!o.public) L.push("    public: false");
+  L.push("    dimensions:");L.push("      - name: order_id");L.push("        sql: order_id");L.push("        type: string");
+  if(!o.pk) L.push("        primary_key: true");
+  L.push("      - name: state");L.push("        sql: state");
+  if(o.dup) L.push(`        <span class="hl">sql: state_code</span>`);
+  L.push("        type: string");
+  $("#lintYaml").innerHTML=`<span class="yc"># model/cubes/base_orders.yml</span>\n`+L.join("\n");
+  $("#lintOut").innerHTML="";return o;}
+$$("[data-lint]").forEach(c=>c.onchange=lintYaml);lintYaml();
+$("#lintRun").onclick=()=>{const o=lintYaml(),P=[],f="cubes/base_orders.yml";
+  if(o.quote)P.push(`${f}:3: quoted Jinja interpolation — remove the quotes`);
+  if(o.dup)P.push(`${f}: ConstructorError: duplicated key 'sql'`);
+  else{ if(!o.public)P.push(`${f}: cube base_orders is not \`public: false\``);
+        if(!o.pk)P.push(`${f}: cube base_orders declares no primary_key dimension`);}
+  P.push(`${P.length} problem(s) in model`);
+  $("#lintOut").innerHTML=res(P.length>1?"bad":"ok",`<pre>$ python scripts/lint_model.py model\n${esc(P.join("\n"))}\nexit ${P.length>1?1:0}</pre>`)+(o.dup&&(!o.public||!o.pk)?`<p class="hint">A file that fails to parse is reported once and skipped, so its other problems show up on the next run.</p>`:"");};
+
+const EXPECTED=["orders","customers","revenue"], ALLV=["orders","customers","revenue","refunds","base_orders"];
+const pub=new Set(EXPECTED);
+function renderStore(){
+  $("#storeChips").innerHTML='<span class="hint">Published in /meta:</span> '+ALLV.map(v=>`<label class="chk" style="margin:0 8px 0 0"><input type="checkbox" data-v="${v}" ${pub.has(v)?"checked":""}> <code>${v}</code>${v.startsWith("base_")?' <span class="hint">(cube)</span>':''}</label>`).join("");
+  $$("#storeChips input").forEach(c=>c.onchange=()=>{c.checked?pub.add(c.dataset.v):pub.delete(c.dataset.v);renderStore()});
+  const views=[...pub].filter(v=>!v.startsWith("base_")), cubes=[...pub].filter(v=>v.startsWith("base_"));
+  const extra=views.filter(v=>!EXPECTED.includes(v)), missing=EXPECTED.filter(v=>!pub.has(v));
+  let h= (!extra.length&&!missing.length)? res("ok","<b>test_storefront_is_exactly_the_expected_views</b> passes.") :
+    res("bad",`<b>test_storefront_is_exactly_the_expected_views</b> fails:<pre>storefront drift — published but not in suite.yml: ${JSON.stringify(extra)}; in suite.yml but not published: ${JSON.stringify(missing)}</pre>`);
+  h+= cubes.length? res("bad",`<b>test_no_private_cube_is_exposed</b> fails:<pre>cubes visible through /meta (set public: false): ${JSON.stringify(cubes)}</pre>`) : res("ok","<b>test_no_private_cube_is_exposed</b> passes.");
+  $("#storeOut").innerHTML=h;}
+renderStore();
+
+const PII=['(^|_)email$','(^|_)phone','(^|_)address','date_of_birth','(^|_)tfn$','first_name','last_name','full_name'];
+function renderPii(){const full=$("#piiName").value.trim(),short=full.split(".").slice(1).join(".")||full,view=$("#piiView").value,tag=$("#piiTag").checked;
+  const hit=PII.find(p=>new RegExp(p).test(short));
+  let h;
+  if(view==="customers") h=res("ok",`<code>customers</code> is in <code>pii_allowed_views</code>, so the test returns early.`);
+  else if(tag||hit) h=res("bad",`<b>test_pii_is_confined[${esc(view)}]</b> fails: ${esc(view)} exposes PII outside its allowed views: ['${esc(full)}']<br><span style="font-size:13px">Matched by ${tag?"<code>meta.pii: true</code>":""}${tag&&hit?" and ":""}${hit?`name pattern <code>${esc(hit)}</code>`:""}.</span>`);
+  else h=res("ok",`No tag and no name pattern matched <code>${esc(short)}</code>. Passes. (This is why the meta tag is the primary control: a column called <code>contact</code> holding emails slips past names.)`);
+  $("#piiOut").innerHTML=h;}
+["#piiName","#piiView","#piiTag"].forEach(s=>$(s).addEventListener("input",renderPii));renderPii();
+
+/* sqlcheck port */
+const QI="(?:`[^`]+`|\"[^\"]+\"|\\[[^\\]]+\\]|[A-Za-z_][\\w$]*)";
+const VAL="(?:\\?|\\$\\d+|'(?:[^']|'')*'|-?\\d+(?:\\.\\d+)?)";
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+function colPattern(col){const c=reEsc(col);
+  const target=`(?:\`${c}\`|"${c}"|\\[${c}\\]|(?<![\\w$])${c}(?![\\w$]))`;
+  return new RegExp(`(?:${QI}\\s*\\.\\s*)*${target}\\s*(?:(?<eq>=)\\s*(?<one>${VAL})|(?<in>\\bIN\\b)\\s*\\(\\s*(?<many>${VAL}(?:\\s*,\\s*${VAL})*)\\s*\\))`,"gid");}
+function qmarksBefore(sql,end){let n=0,q=null;for(const ch of sql.slice(0,end)){if(q){if(ch===q)q=null}else if("'`\"".includes(ch))q=ch;else if(ch==="?")n++}return n}
+function resolveTok(t,i,params){if(t==="?"){if(i>=params.length)throw new Error(`SQL has more ? placeholders than params (${params.length})`);return[params[i],i+1]}
+  if(t.startsWith("$"))return[params[+t.slice(1)-1],i]; if(t.startsWith("'"))return[t.slice(1,-1).replace(/''/g,"'"),i]; return[t,i]}
+function filterValues(sql,params,col){const found=[];let matched=false;
+  for(const m of sql.matchAll(colPattern(col))){matched=true;
+    const g=m.groups, idx=m.indices.groups;
+    const toks=g.eq?[g.one]:g.many.match(new RegExp(VAL,"g"));
+    let i=qmarksBefore(sql,g.eq?idx.one[0]:idx.many[0]);
+    for(const t of toks){let v;[v,i]=resolveTok(t,i,params);found.push(v)}}
+  return matched?found:null}
+function rowFilterProblem(sql,params,col,allowed){const vals=filterValues(sql,params||[],col);
+  if(vals===null)return `no \`${col} = …\` or \`${col} IN (…)\` predicate in the generated SQL`;
+  const got=new Set(vals.map(String)),want=new Set(allowed.map(String));
+  const extra=[...got].filter(x=>!want.has(x)).sort(),missing=[...want].filter(x=>!got.has(x)).sort();
+  if(extra.length)return `the filter on ${col} also allows ${JSON.stringify(extra)} (allowed: ${JSON.stringify([...want].sort())})`;
+  if(missing.length)return `the filter on ${col} does not include ${JSON.stringify(missing)} (it binds ${JSON.stringify([...got].sort())})`;
+  return null}
+
+const RLS_EX={
+ "Correct (BigQuery ?)":{sql:"SELECT sum(`base_orders`.net_amount) `revenue__net_revenue`\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.state = ?)\nLIMIT 10000",params:'["NSW"]',col:"state",allowed:"NSW"},
+ "IN list, quoted":{sql:'SELECT sum("base_orders"."net_amount")\nFROM gold.fct_orders AS "base_orders"\nWHERE ("base_orders"."state" IN (?, ?))',params:'["NSW","VIC"]',col:"state",allowed:"NSW, VIC"},
+ "Wrong column":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.billing_state = ?)",params:'["NSW"]',col:"state",allowed:"NSW"},
+ "Lets VIC through":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.state IN (?, ?))",params:'["NSW","VIC"]',col:"state",allowed:"NSW"},
+ "No filter at all":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nLIMIT 10000",params:"[]",col:"state",allowed:"NSW"},
+ "Placeholder order":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.order_date >= ?) AND (`base_orders`.state = ?)",params:'["2026-10-01","NSW"]',col:"state",allowed:"NSW"}
+};
+function loadRls(k){const e=RLS_EX[k];$("#rlsSql").value=e.sql;$("#rlsParams").value=e.params;$("#rlsCol").value=e.col;$("#rlsAllowed").value=e.allowed;runRls();}
+$("#rlsEx").innerHTML=Object.keys(RLS_EX).map(k=>`<button class="btn sm" data-k="${esc(k)}">${esc(k)}</button>`).join("");
+$$("#rlsEx button").forEach(b=>b.onclick=()=>loadRls(b.dataset.k));
+function runRls(){let params;try{params=JSON.parse($("#rlsParams").value||"[]");if(!Array.isArray(params))throw 0}catch(e){$("#rlsOut").innerHTML=res("warn","Params must be a JSON array, e.g. [\"NSW\"].");return}
+  const col=$("#rlsCol").value.trim(),allowed=$("#rlsAllowed").value.split(",").map(s=>s.trim()).filter(Boolean);
+  try{const vals=filterValues($("#rlsSql").value,params,col),p=rowFilterProblem($("#rlsSql").value,params,col,allowed);
+    $("#rlsOut").innerHTML=`<div class="hint">filter_values(…, "${esc(col)}") → <code>${vals===null?"None":esc(JSON.stringify(vals))}</code></div>`+(p?res("bad",`<b>Fails:</b> ${esc(p)}`):res("ok",`<b>Passes:</b> the SQL restricts <code>${esc(col)}</code> to exactly ${esc(JSON.stringify(allowed))}.`));
+  }catch(e){$("#rlsOut").innerHTML=res("bad",esc(e.message))}}
+["#rlsSql","#rlsParams","#rlsCol","#rlsAllowed"].forEach(s=>$(s).addEventListener("input",runRls));loadRls("Correct (BigQuery ?)");
+
+/* ---------------- step 7: fan-out ---------------- */
+const ORDERS=[{id:"O1",cust:"C1",amt:100},{id:"O2",cust:"C2",amt:250},{id:"O3",cust:"C1",amt:80},{id:"O4",cust:"C3",amt:170}];
+const ITEMS={O1:["Shoes","Socks"],O2:["Shoes"],O3:["Hats"],O4:["Socks"]};
+let fanDim="state";
+function renderFan(){const dup=$("#fanDup").checked;
+  const cust=[{id:"C1",state:"NSW"},{id:"C2",state:"VIC"},{id:"C3",state:"NSW"}]; if(dup)cust.push({id:"C2",state:"VIC",dup:true});
+  const joined=[];
+  ORDERS.forEach(o=>{ if(fanDim==="state"){cust.filter(c=>c.id===o.cust).forEach(c=>joined.push({o,g:c.state,dup:c.dup}))}
+    else ITEMS[o.id].forEach((cat,i)=>joined.push({o,g:cat,dup:i>0}))});
+  const grand=ORDERS.reduce((s,o)=>s+o.amt,0);
+  const groups={};joined.forEach(r=>groups[r.g]=(groups[r.g]||0)+r.o.amt);
+  const split=Object.values(groups).reduce((a,b)=>a+b,0);
+  $("#fanJoin").innerHTML=`<div class="hint">Rows after the join (${fanDim==="state"?"orders → customers":"orders → order_items"})</div><table class="mini"><tr><th>order</th><th>${fanDim==="state"?"customer":"item"}</th><th>${fanDim==="state"?"state":"category"}</th><th style="text-align:right">amount</th></tr>`+
+    joined.map(r=>`<tr class="${r.dup?"dup":""}"><td>${r.o.id}</td><td>${fanDim==="state"?r.o.cust:"·"}</td><td>${r.g}</td><td class="num">${r.o.amt}</td></tr>`).join("")+"</table>";
+  $("#fanGrand").textContent=fmt(grand);$("#fanSplit").textContent=fmt(split);
+  $("#fanGroups").innerHTML=`<table class="mini"><tr><th>${fanDim==="state"?"customers.state":"items.category"}</th><th style="text-align:right">total_revenue</th></tr>`+Object.entries(groups).map(([g,v])=>`<tr><td>${g}</td><td class="num">${fmt(v)}</td></tr>`).join("")+"</table>";
+  let h;
+  if(split===grand) h=res("ok","Sum of groups equals the grand total. No fan-out.");
+  else h=res("bad",`<pre>orders.total_revenue by ${fanDim==="state"?"orders.customer_state":"orders.product_category"}: ${fmt(grand)} -> ${fmt(split)} INFLATED (fan-out)</pre>`)+
+    (fanDim==="cat"&&!dup?`<p class="hint" style="margin-top:8px">Here it's legitimate: O1 really is in two categories, so the groups overlap by design. Add the pair to <code>suite.yml › fanout.allowlist</code> with a reason.</p>`:`<p class="hint" style="margin-top:8px">A real bug: a missing or non-unique <code>primary_key</code>, or a wrong relationship, is duplicating fact rows.</p>`);
+  $("#fanOut").innerHTML=h;}
+seg($("#fanSeg"),b=>{fanDim=b.dataset.d;renderFan()});$("#fanDup").onchange=renderFan;renderFan();
+
+/* ---------------- step 8: parity ---------------- */
+const BASE=[["NSW","2026-07-01",412000.00],["NSW","2026-08-01",398500.50],["VIC","2026-07-01",301200.00],["VIC","2026-08-01",322940.10]];
+function close(a,b,at,rt){if(a==null||b==null)return a==null&&b==null;return Math.abs(a-b)<=Math.max(at,rt*Math.abs(b))}
+function compareRowsets(cube,ref){const ci={},ri={},P=[];
+  cube.forEach(r=>ci[r.state+"|"+r.month.slice(0,10)]=r);ref.forEach(r=>ri[r.state+"|"+r.order_month]=r);
+  const key=k=>`('${k.split("|")[0]}', '${k.split("|")[1]}')`;
+  Object.keys(ri).filter(k=>!ci[k]).sort().forEach(k=>P.push(`${key(k)}: in BigQuery but missing from Cube`));
+  Object.keys(ci).filter(k=>!ri[k]).sort().forEach(k=>P.push(`${key(k)}: in Cube but missing from BigQuery`));
+  Object.keys(ci).filter(k=>ri[k]).sort().forEach(k=>{const a=+ci[k].rev,b=ri[k].net_revenue;if(!close(a,b,0.01,1e-6))P.push(`${key(k)} revenue.net_revenue: Cube=${a} BigQuery=${b}`)});
+  return P;}
+function renderPar(s){
+  let cube=BASE.map(r=>({state:r[0],month:r[1]+"T00:00:00.000",rev:r[2].toFixed(2)}));
+  let bq=BASE.map(r=>({state:r[0],order_month:r[1],net_revenue:r[2]}));
+  if(s==="tol") cube[1].rev=(398500.50+0.004).toFixed(3);
+  if(s==="tz"){ cube[0].rev=(412000-1830.25).toFixed(2); cube[1].rev=(398500.50+1830.25).toFixed(2); }
+  if(s==="miss") cube=cube.filter((r,i)=>i!==3);
+  $("#parCube").innerHTML=`<table class="mini"><tr><th>revenue.state</th><th>revenue.order_date.month</th><th style="text-align:right">revenue.net_revenue</th></tr>`+cube.map(r=>`<tr><td>${r.state}</td><td class="mono">${r.month}</td><td class="num">"${r.rev}"</td></tr>`).join("")+"</table>";
+  $("#parBq").innerHTML=`<table class="mini"><tr><th>state</th><th>order_month</th><th style="text-align:right">net_revenue</th></tr>`+bq.map(r=>`<tr><td>${r.state}</td><td class="mono">${r.order_month}</td><td class="num">${r.net_revenue.toFixed(2)}</td></tr>`).join("")+"</table>";
+  const P=compareRowsets(cube,bq);
+  const note={match:"Keys are normalised first: Cube's '2026-07-01T00:00:00.000' and BigQuery's date both become '2026-07-01'; Cube's string numbers become floats.",
+    tol:"0.004 off is inside abs tolerance 0.01 (one cent), so it passes.",
+    tz:"The reference SQL buckets in Australia/Sydney; the Cube query left timezone unset (UTC). Orders late on 30 June UTC are 1 July in Sydney, so revenue moves between months while the quarter total still matches. An all-time total would never catch this.",
+    miss:"A whole group is missing from Cube, e.g. a join dropping rows, or (before fix 3) a silently truncated result."}[s];
+  $("#parOut").innerHTML=(P.length?res("bad",`<b>revenue_by_state_by_month_q3_2026: ${P.length} mismatch(es)</b><pre>${esc(P.join("\n"))}</pre>`):res("ok","<b>Passes.</b> compare_rowsets returned no problems."))+`<p class="hint" style="margin-top:8px">${note}</p>`;}
+seg($("#parSeg"),b=>renderPar(b.dataset.s));renderPar("match");
+
+/* ---------------- step 9: rollups ---------------- */
+const ROLL=[
+ {t:"Routing",s:"/v1/sql · free",h:"<p><b>test_query_is_routed_to_the_rollup</b>: <code>/v1/sql</code> lists the matched pre-aggregations. The rollup's name must appear, or the query would go to BigQuery. No query runs.</p>"},
+ {t:"Materialised",s:"/v1/load",h:"<p><b>test_rollup_is_materialised_and_served</b>: routing says Cube <em>would</em> use the rollup; this proves it was built and the answer actually came from it (<code>usedPreAggregations</code>).</p>"},
+ {t:"Values",s:"Cube vs BigQuery",h:"<p><b>test_rollup_values_match_bigquery</b>: the rollup's rows go through <code>rows_all</code> and <code>compare_rowsets</code> against the case's <code>bigquery_sql</code>. Catches a rollup defined with the wrong measure or a stale partition.</p>"},
+ {t:"Freshness",s:"newest period",h:"<p><b>test_rollup_is_fresh</b>: asks for the newest period at the rollup's own granularity, requires it to be served by the rollup, and compares it with <code>MAX(date)</code> from BigQuery. Try the simulator below.</p>"}];
+const rp=$("#rollPipe");ROLL.forEach((r,i)=>{if(i)rp.insertAdjacentHTML("beforeend",'<span class="arrow">→</span>');const b=document.createElement("button");b.className="stage"+(i?"":" on");b.innerHTML=`<b>${i+1}. ${r.t}</b><small>${r.s}</small>`;b.onclick=()=>{$$(".stage",rp).forEach(x=>x.classList.toggle("on",x===b));$("#rollDetail").innerHTML=r.h};rp.appendChild(b)});
+$("#rollDetail").innerHTML=ROLL[0].h;
+
+const GR=["day","week","month","quarter","year"];
+const D=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(Date.UTC(y,m-1,d))};
+const ISO=d=>d.toISOString().slice(0,10);
+function periodStart(d,g){d=new Date(d);if(g==="day")return d;
+  if(g==="week"){const wd=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-wd);return d}
+  if(g==="month")return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1));
+  if(g==="quarter")return new Date(Date.UTC(d.getUTCFullYear(),3*Math.floor(d.getUTCMonth()/3),1));
+  return new Date(Date.UTC(d.getUTCFullYear(),0,1));}
+function canServe(rollup,q){if(rollup===q)return true;if(q==="week")return rollup==="day";if(rollup==="week")return false;return GR.indexOf(q)>GR.indexOf(rollup)}
+function renderFr(){
+  const rg=$("#frG").value,qsel=$("#frQ").value,qg=qsel==="auto"?rg:qsel;
+  if(!$("#frR").value||!$("#frB").value)return;
+  const rLast=D($("#frR").value),bLast=D($("#frB").value),lag=Math.max(0,parseInt($("#frL").value||"0",10)),
+        maxAge=$("#frA").value===""?null:parseFloat($("#frA").value),built=parseFloat($("#frH").value||"0");
+  // old: asked for latest DAY
+  const oldServed=canServe(rg,"day");
+  if(oldServed){const ok=periodStart(rLast,"day")>=periodStart(new Date(bLast.getTime()-lag*864e5),"day");
+    $("#frOld").innerHTML=(ok?res("ok","Passes."):res("bad","Fails: rollup's latest day is behind."))+`<p class="hint" style="margin-top:8px">A daily rollup can answer the day query, so here the old check happened to work.</p>`;}
+  else $("#frOld").innerHTML=res(rLast<periodStart(bLast,rg)?"warn":"ok",`<b>Passes</b>${rLast<periodStart(bLast,rg)?" (falsely)":""}. The day-level query can't be answered by a ${rg} rollup, so Cube sent it to BigQuery and got ${ISO(bLast)}, which it compared with BigQuery's own ${ISO(bLast)}.`)+(rLast<periodStart(bLast,rg)?`<p class="hint" style="margin-top:8px">The rollup actually stops at ${ISO(rLast)}. Nobody was told.</p>`:"");
+  // new
+  const served=canServe(rg,qg),P=[];
+  if(!served) P.push(`the freshness query (granularity=${qg}) was not served by revenue_by_state_monthly, so it would measure BigQuery, not the rollup. Set freshness.granularity to a granularity the rollup can answer.`);
+  else{const cubeP=periodStart(rLast,qg),req=periodStart(new Date(bLast.getTime()-lag*864e5),qg);
+    if(cubeP<req)P.push(`revenue_by_state_monthly's latest ${qg} is ${ISO(cubeP)}; BigQuery's latest day is ${ISO(bLast)}, so with max_lag_days=${lag} the rollup should hold the ${qg} starting ${ISO(req)}. Has the rollup refreshed since the last dbt run?`);
+    if(maxAge!==null&&built>maxAge)P.push(`revenue_by_state_monthly was last built ${built.toFixed(1)} hours ago (max_refresh_age_hours=${maxAge})`);}
+  $("#frNew").innerHTML=(P.length?res("bad",`<b>Fails</b><pre>${esc(P.join("\n"))}</pre>`):res("ok",`<b>Passes.</b> Asked at <code>${qg}</code>, served by the rollup, latest period ${ISO(periodStart(rLast,qg))} covers what BigQuery requires.`));}
+["#frG","#frQ","#frR","#frB","#frL","#frA","#frH"].forEach(s=>$(s).addEventListener("input",renderFr));
+const FR={stale:{g:"month",q:"auto",r:"2026-08-31",b:"2026-10-14",l:1,a:"",h:20},
+  fresh:{g:"month",q:"auto",r:"2026-10-14",b:"2026-10-14",l:1,a:"",h:3},
+  boundary:{g:"month",q:"auto",r:"2026-10-31",b:"2026-11-01",l:1,a:"",h:5},
+  within:{g:"month",q:"auto",r:"2026-10-05",b:"2026-10-14",l:1,a:"26",h:212}};
+$$("[data-fr]").forEach(b=>b.onclick=()=>{const v=FR[b.dataset.fr];$("#frG").value=v.g;$("#frQ").value=v.q;$("#frR").value=v.r;$("#frB").value=v.b;$("#frL").value=v.l;$("#frA").value=v.a;$("#frH").value=v.h;renderFr()});
+renderFr();
+
+/* ---------------- step 10: CI ---------------- */
+const CI={
+ pr:[["Pull request","model/**, cube.py changed","Triggered when the Cube model, <code>cube.py</code> or the suite changes. A newer push to the same ref cancels the run in progress."],
+     ["lint","lint_model.py","Installs only PyYAML and Jinja2 and runs <code>python scripts/lint_model.py ../model</code>. Problems are printed as <code>::error::</code> annotations. Seconds, no credentials."],
+     ["Keep staging active","Control Plane PUT","<code>PUT …/branches/staging-environment</code> with <code>{branchName, enabled: true}</code> so the PR branch's staging environment stays up for the tests."],
+     ["Point at the branch","CUBE_API_URL","Builds <code>CUBE_API_URL</code> by replacing <code>{branch}</code> in <code>CUBE_STAGING_API_URL_TEMPLATE</code> with the PR's head branch."],
+     ["pytest&nbsp;-m unit","no network","The framework's own tests against a fake Cube. If the suite itself is broken, stop before testing the model with it."],
+     ["pytest&nbsp;-m contract","no BigQuery cost","Compile via Control Plane, storefront, governance, auth fails closed, persona visibility, row filter in generated SQL, parity cases well-formed."]],
+ post:[["repository_&shy;dispatch","dbt-prod-run-finished","Airflow fires this after the production dbt run (or run it by hand with <code>workflow_dispatch</code>). Targets <code>CUBE_PROD_API_URL</code>."],
+     ["GCP auth","Workload Identity","<code>google-github-actions/auth</code> with WIF, no key file. The service account needs BigQuery Job User and read-only access to the gold datasets."],
+     ["wait_for_&shy;rollups.py","--timeout 1800","Polls each rollup case's query every 30 s until <code>usedPreAggregations</code> names the rollup, so a rollup still building isn't reported as a failure. Exits 1 on timeout."],
+     ["Full suite","contract or data or parity or rollup","Everything against production, with <code>CI_RUN_ID</code> labelling every BigQuery job. A failure here should block \"dashboards are fresh\" and alert the data product owner."],
+     ["Upload results","results.xml","JUnit XML uploaded as an artifact even when tests fail."]]};
+const KCOL={trigger:"#cfa955",setup:"#5c9c94",check:"#7f9a45",test:"#c97a45",result:"#2f5d3a"};
+const KIND={pr:["trigger","check","setup","setup","test","test"],post:["trigger","setup","setup","test","result"]};
+const KICON={trigger:"⚡",setup:"🔧",check:"🔎",test:"🧪",result:"📦"};
+function ciShow(b,s){$$(".cipipe .stage").forEach(x=>x.classList.toggle("on",x===b));$("#ciDetail").style.setProperty("--sc",b.style.getPropertyValue("--k"));$("#ciDetail").innerHTML=`<h3 style="margin-top:0">${KICON[b.dataset.kind]} ${s[0]}</h3><p style="margin:0">${s[2]}</p>`}
+function pipe(el,list,kinds){list.forEach((s,i)=>{
+  if(i)el.insertAdjacentHTML("beforeend",`<span class="flowarrow" style="--a:${KCOL[kinds[i-1]]};--b:${KCOL[kinds[i]]}"><i></i></span>`);
+  const b=document.createElement("button");b.className="stage";b.dataset.kind=kinds[i];b.style.setProperty("--k",KCOL[kinds[i]]);
+  b.innerHTML=`<span class="kicon">${KICON[kinds[i]]}</span><b>${s[0]}</b><small>${s[1]}</small>`;b.onclick=()=>ciShow(b,s);el.appendChild(b)})}
+pipe($("#ciPr"),CI.pr,KIND.pr);pipe($("#ciPost"),CI.post,KIND.post);ciShow($$("#ciPr .stage")[1],CI.pr[1]);
+let ciTimer=null;
+$$(".ciplay").forEach(btn=>btn.onclick=()=>{
+  clearInterval(ciTimer);$$(".cipipe .stage,.cipipe .flowarrow").forEach(x=>x.classList.remove("run","done","go"));
+  const lane=$("#"+btn.dataset.lane),stages=$$(".stage",lane),arrows=$$(".flowarrow",lane),data=btn.dataset.lane==="ciPr"?CI.pr:CI.post;let i=0;
+  $$(".ciplay").forEach(x=>x.disabled=true);
+  const step=()=>{if(i>0){stages[i-1].classList.replace("run","done");if(arrows[i-1])arrows[i-1].classList.add("go")}
+    if(i>=stages.length){clearInterval(ciTimer);$$(".ciplay").forEach(x=>x.disabled=false);btn.textContent="↻ Play again";
+      $("#ciDetail").innerHTML+=`<p class="cidone">✅ ${btn.dataset.lane==="ciPr"?"PR gate passed: the branch is safe to merge.":"Production checks passed: dashboards can be marked fresh."}</p>`;return}
+    stages[i].classList.add("run");ciShow(stages[i],data[i]);i++};
+  step();ciTimer=setInterval(step,1300)});
+
+
+/* ---------------- step 11: bugs ---------------- */
+seg($("#bugNav"),b=>$$("[data-bug]").forEach(p=>p.classList.toggle("on",p.dataset.bug===b.dataset.b)));
+function renderCd(){const env=$("#cdEnv").value.trim(),dot=$("#cdDot").value.trim(),exists=$("#cdExists").checked;
+  const oldDir=env||"./config";
+  $("#cdOld").innerHTML=(env? res("ok",`Reads <code>${esc(env)}</code> (it was in the real environment at import time).`)
+    : res(dot?"bad":"ok",`Reads <code>./config</code>${dot?`. The <code>.env</code> value <code>${esc(dot)}</code> was loaded too late and silently ignored, so the <b>example</b> config ran.`:"."}`))+
+    (env&&!exists?res("bad","…and a missing folder gave an empty config, so tests quietly skipped."):"");
+  const raw=env||dot;
+  if(!raw) $("#cdNew").innerHTML=res("ok","No override: uses the bundled <code>./config</code>.");
+  else if(!exists) $("#cdNew").innerHTML=res("bad",`<pre>ConfigError: SEMTEST_CONFIG_DIR='${esc(raw)}' does not exist (resolved to ${esc(raw.startsWith("/")||/^[A-Za-z]:/.test(raw)?raw:"<suite root>/"+raw)})</pre>`);
+  else $("#cdNew").innerHTML=res("ok",`Reads <code>${esc(raw)}</code>${env&&dot?` (the real environment wins over <code>.env</code>)`:env?"":" from <code>.env</code>"}${raw.startsWith("/")||/^[A-Za-z]:/.test(raw)?"":", resolved from the suite root"}.`);}
+["#cdEnv","#cdDot","#cdExists"].forEach(s=>$(s).addEventListener("input",renderCd));renderCd();
+
+function renderRl(){const n=+$("#rlN").value,L=Math.max(1,+$("#rlL").value||50000),top=$("#rlTop").checked;$("#rlNv").textContent=n.toLocaleString();
+  if(top){$("#rlOld").innerHTML=res("ok",`Returns ${Math.min(n,100)} rows, as asked.`);$("#rlNew").innerHTML=res("ok",`The query set its own <code>limit</code>, so it's a deliberate top-N: ${Math.min(n,100)} rows returned as is.`);return}
+  const oldGot=Math.min(n,10000);
+  $("#rlOld").innerHTML= n>10000? res("bad",`Cube silently applies its default limit and returns <b>${oldGot.toLocaleString()}</b> of ${n.toLocaleString()} rows. The test compares them as complete: parity reports ${(n-oldGot).toLocaleString()} groups "in BigQuery but missing from Cube", fan-out reports "SHRANK (rows dropped by join)".`)
+    : res("ok",`${n.toLocaleString()} rows, all of them (under the 10,000 default).`);
+  const got=Math.min(n,L);
+  $("#rlNew").innerHTML= got>=L? res("warn",`<pre>TruncatedResult: Cube returned ${got.toLocaleString()} rows, which is the row limit (${L.toLocaleString()}), so the result is probably cut off. This is not a data mismatch. Narrow the query (a shorter dateRange or a filter), or raise suite.yml › row_limit…</pre>`)
+    : res("ok",`Sends <code>limit: ${L.toLocaleString()}</code> explicitly and gets all ${n.toLocaleString()} rows.`);}
+["#rlN","#rlL","#rlTop"].forEach(s=>$(s).addEventListener("input",renderRl));renderRl();
+
+const B4={
+ "Value on another column":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.billing_state = ?)",params:["NSW"],allowed:["NSW"]},
+ "Short value, no filter":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nLIMIT 10000",params:[],allowed:["1"]},
+ "Also lets VIC through":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.state IN (?, ?))",params:["NSW","VIC"],allowed:["NSW"]},
+ "Correct filter":{sql:"SELECT sum(`base_orders`.net_amount)\nFROM `gold`.`fct_orders` AS `base_orders`\nWHERE (`base_orders`.state = ?)",params:["NSW"],allowed:["NSW"]}};
+$("#b4Ex").innerHTML=Object.keys(B4).map((k,i)=>`<button class="btn sm${i?"":" primary"}" data-k="${k}">${k}</button>`).join("");
+function renderB4(k){const e=B4[k];$$("#b4Ex button").forEach(b=>b.classList.toggle("primary",b.dataset.k===k));
+  $("#b4Sql").textContent=e.sql+"\n\nparams = "+JSON.stringify(e.params)+"   column = state   allowed = "+JSON.stringify(e.allowed);
+  const hay=e.sql+" "+JSON.stringify(e.params),oldOk=e.allowed.every(v=>hay.includes(v));
+  $("#b4Old").innerHTML=oldOk?res(k==="Correct filter"?"ok":"warn",`Passes: ${e.allowed.map(v=>`"${esc(v)}"`).join(", ")} found in the SQL or params.`)+(k!=="Correct filter"?'<p class="hint" style="margin-top:8px">A false pass.</p>':""):res("bad","Fails.");
+  const p=rowFilterProblem(e.sql,e.params,"state",e.allowed);
+  $("#b4New").innerHTML=p?res("bad",`Fails: ${esc(p)}`):res("ok","Passes: state is restricted to exactly the allowed values.");}
+$$("#b4Ex button").forEach(b=>b.onclick=()=>renderB4(b.dataset.k));renderB4("Value on another column");
+
+/* ---------------- step 12: commands ---------------- */
+const CMDS=[["pip install -r requirements.txt","Python deps"],["cp .env.example .env","Fill in Cube URL/secret, Control Plane key, BigQuery project"],["pytest&nbsp;-m unit","Framework self-tests. No credentials needed"],["gcloud auth application-default login","Local BigQuery auth"],["python scripts/lint_model.py ../your-cube-repo/model","Static model lint"],["pytest&nbsp;-m contract","Needs Cube"],["pytest -m \"data or parity\"","Needs Cube + BigQuery"],["python scripts/wait_for_rollups.py && pytest -m rollup","After the rollup refresh"]];
+$("#cmds").innerHTML=CMDS.map(c=>`<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:7px 0;cursor:pointer" data-c="${esc(c[0])}"><code>${esc(c[0])}</code><span class="hint">${esc(c[1])}</span></div>`).join("");
+$$("#cmds [data-c]").forEach(r=>r.onclick=()=>{const t=r.dataset.c,done=()=>{const h=$(".hint",r),o=h.textContent;h.textContent="Copied";setTimeout(()=>h.textContent=o,1200)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,()=>{});});
+})();
+</script>
+</body>
+</html>
